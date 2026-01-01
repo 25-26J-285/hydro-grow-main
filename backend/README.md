@@ -2,12 +2,29 @@
 
 ## Quick Start
 
-1. **Create a virtual environment:**
+### Windows PowerShell
+
+1. **Activate virtual environment:**
+   ```powershell
+   & ".\.venv\Scripts\Activate.ps1"
+   ```
+
+2. **Install dependencies:**
+   ```powershell
+   python -m pip install -r requirements.txt
+   ```
+   *Note: Dependencies are already installed. This is optional.*
+
+3. **Run the server:**
+   ```powershell
+   & ".\.venv\Scripts\python.exe" -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   ```
+
+### macOS/Linux
+
+1. **Activate virtual environment:**
    ```bash
-   python -m venv .venv
-   .\.venv\Scripts\activate  # Windows
-   # or
-   source .venv/bin/activate  # macOS/Linux
+   source .venv/bin/activate
    ```
 
 2. **Install dependencies:**

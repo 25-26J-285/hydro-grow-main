@@ -19,18 +19,21 @@
 
 ## 🚀 Quick Start (60 seconds)
 
-### Step 1: Start Backend
+### Step 1: Start Backend (in a new terminal)
 ```powershell
-cd ../hydro-grow-main/backend
-.\venv\Scripts\activate
-uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+cd backend
+& ".\.venv\Scripts\Activate.ps1"
+& ".\.venv\Scripts\python.exe" -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### Step 2: Start Frontend
+Server runs on: http://localhost:8000/docs
+
+### Step 2: Start Frontend (in another terminal)
 ```powershell
-cd HydroGrow
+cd frontend
+npm install  # if first time
 npm start
-# Press 'w' for web preview
+# Press 'w' for web preview (or 'i' for iOS simulator, 'a' for Android)
 ```
 
 ### Step 3: Login
