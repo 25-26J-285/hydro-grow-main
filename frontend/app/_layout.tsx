@@ -34,7 +34,7 @@ export default function RootLayout() {
         headerShown: false,
       }}
     >
-      {isLoggedIn ? (
+      {isLoggedIn ==false ? (
         // App Stack (logged in)
         <Stack.Screen name="(tabs)" />
       ) : (
