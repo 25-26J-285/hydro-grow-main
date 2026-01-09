@@ -6,6 +6,11 @@ from datetime import datetime, timedelta
 from typing import Optional
 import jwt
 import hashlib
+from app.routers import esp32_gateway
+from app.api import sensors
+from app.api import actuators
+import threading
+from app.services.discovery import run_discovery_service
 
 # Configuration
 SECRET_KEY = "your-secret-key-change-this-in-production"
@@ -37,6 +42,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Start UDP Discovery Service in background
+discovery_thread = threading.Thread(target=run_discovery_service, daemon=True)
+discovery_thread.start()
+
+# Include routers
+app.include_router(esp32_gateway.router)
+app.include_router(sensors.router)
+app.include_router(actuators.router)
 
 # ============ Pydantic Models ============
 class UserRegister(BaseModel):

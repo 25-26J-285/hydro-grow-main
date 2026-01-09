@@ -1,0 +1,611 @@
+{
+	"info": {
+		"_postman_id": "hydro-grow-api-collection",
+		"name": "Hydro Grow API",
+		"description": "Complete API collection for ESP32 Hydroponic System with WebSocket and REST endpoints",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"fullname\": \"Test User\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/register",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "register"]
+						}
+					}
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.environment.set(\"access_token\", jsonData.access_token);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"farmer@example.com\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/login",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "login"]
+						}
+					}
+				},
+				{
+					"name": "Get Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8000/api/me",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "me"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "System Status",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/healthz",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["healthz"]
+						}
+					}
+				},
+				{
+					"name": "Get System State",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/state",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "state"]
+						}
+					}
+				},
+				{
+					"name": "Get Devices Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/devices/status",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "devices", "status"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Sensor Endpoints",
+			"item": [
+				{
+					"name": "Get All Sensors",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/sensors/all",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "sensors", "all"]
+						}
+					}
+				},
+				{
+					"name": "Get Temperature",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/sensor/temp",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "sensor", "temp"]
+						}
+					}
+				},
+				{
+					"name": "Get Humidity",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/sensor/humidity",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "sensor", "humidity"]
+						}
+					}
+				},
+				{
+					"name": "Get Air Quality",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/sensor/air",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "sensor", "air"]
+						}
+					}
+				},
+				{
+					"name": "Get Light Level",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/sensor/light",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "sensor", "light"]
+						}
+					}
+				},
+				{
+					"name": "Get Distance",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/sensor/dist",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "sensor", "dist"]
+						}
+					}
+				},
+				{
+					"name": "Get pH Level",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/sensor/ph",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "sensor", "ph"]
+						}
+					}
+				},
+				{
+					"name": "Get Energy Monitor",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/sensor/energy",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "sensor", "energy"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Actuator Control",
+			"item": [
+				{
+					"name": "Get Actuators Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/actuators/status",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "actuators", "status"]
+						}
+					}
+				},
+				{
+					"name": "Turn Pump ON",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/actuator/pump?action=ON",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "actuator", "pump"],
+							"query": [
+								{
+									"key": "action",
+									"value": "ON"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Turn Pump OFF",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/actuator/pump?action=OFF",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "actuator", "pump"],
+							"query": [
+								{
+									"key": "action",
+									"value": "OFF"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Turn Fan ON",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/actuator/fan?action=ON",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "actuator", "fan"],
+							"query": [
+								{
+									"key": "action",
+									"value": "ON"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Turn Fan OFF",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/actuator/fan?action=OFF",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "actuator", "fan"],
+							"query": [
+								{
+									"key": "action",
+									"value": "OFF"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Turn LED Strip ON",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/actuator/led_strip?action=ON",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "actuator", "led_strip"],
+							"query": [
+								{
+									"key": "action",
+									"value": "ON"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Turn LED Strip OFF",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/actuator/led_strip?action=OFF",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "actuator", "led_strip"],
+							"query": [
+								{
+									"key": "action",
+									"value": "OFF"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Set LED Brightness (50%)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/actuator/led_strip?action=SET_BRIGHTNESS&brightness=128",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "actuator", "led_strip"],
+							"query": [
+								{
+									"key": "action",
+									"value": "SET_BRIGHTNESS"
+								},
+								{
+									"key": "brightness",
+									"value": "128",
+									"description": "0-255"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Set LED Brightness (100%)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/actuator/led_strip?action=SET_BRIGHTNESS&brightness=255",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "actuator", "led_strip"],
+							"query": [
+								{
+									"key": "action",
+									"value": "SET_BRIGHTNESS"
+								},
+								{
+									"key": "brightness",
+									"value": "255"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Move Rail Left",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/actuator/rail?action=MOVE_LEFT",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "actuator", "rail"],
+							"query": [
+								{
+									"key": "action",
+									"value": "MOVE_LEFT"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Move Rail Right",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/actuator/rail?action=MOVE_RIGHT",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "actuator", "rail"],
+							"query": [
+								{
+									"key": "action",
+									"value": "MOVE_RIGHT"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Stop Rail",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/actuator/rail?action=STOP",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "actuator", "rail"],
+							"query": [
+								{
+									"key": "action",
+									"value": "STOP"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Generic Control",
+			"item": [
+				{
+					"name": "Send Control Command",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"target\": \"stationary\",\n  \"component\": \"pump\",\n  \"action\": \"ON\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/control",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "control"]
+						}
+					}
+				},
+				{
+					"name": "Send LED Brightness Command",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"target\": \"stationary\",\n  \"component\": \"led_strip\",\n  \"action\": \"SET_BRIGHTNESS\",\n  \"value\": 200\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/control",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "control"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Camera & Video",
+			"item": [
+				{
+					"name": "Upload Frame (Binary)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/octet-stream"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/upload-frame",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["api", "upload-frame"]
+						},
+						"description": "Upload RGB565 frame from ESP32-CAM (use binary data)"
+					}
+				},
+				{
+					"name": "Video Feed Stream",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/video_feed",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8000",
+							"path": ["video_feed"]
+						},
+						"description": "Open in browser to view live video stream"
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
