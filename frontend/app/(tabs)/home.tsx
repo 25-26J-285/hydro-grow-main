@@ -12,7 +12,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Colors from '../../constants/Colors';
 import { PlantCard } from '../../components/PlantCard';
-import { authAPI } from '../../services/api';
+import { authAPI, systemAPI } from '../../services/api';
 
 interface Item {
   id: number;
@@ -23,6 +23,23 @@ interface Item {
 
 export default function Dashboard() {
   const router = useRouter();
+  const [deviceStatus, setDeviceStatus] = useState({ mobile: false, stationary: false });
+
+  // Fetch device status
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const response = await systemAPI.getDevicesStatus();
+        setDeviceStatus(response.data);
+      } catch (error) {
+        console.error('Error fetching device status:', error);
+      }
+    };
+    
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Use mock data directly to match design request
   const items = [
@@ -77,6 +94,18 @@ export default function Dashboard() {
         <View style={styles.dashboardHeader}>
           <Text style={styles.dashboardTitle}>Dashboard</Text>
           <Text style={styles.dashboardSubtitle}>Smart Hydroponic System</Text>
+        </View>
+
+        {/* Device Status Banner */}
+        <View style={styles.statusBanner}>
+          <View style={styles.statusItem}>
+            <View style={[styles.statusDot, deviceStatus.stationary ? styles.online : styles.offline]} />
+            <Text style={styles.statusText}>Stationary: {deviceStatus.stationary ? 'Online' : 'Offline'}</Text>
+          </View>
+          <View style={styles.statusItem}>
+            <View style={[styles.statusDot, deviceStatus.mobile ? styles.online : styles.offline]} />
+            <Text style={styles.statusText}>Mobile: {deviceStatus.mobile ? 'Online' : 'Offline'}</Text>
+          </View>
         </View>
 
         {/* Add Button Area */}
@@ -224,5 +253,34 @@ const styles = StyleSheet.create({
   retryText: {
     color: 'white',
     fontWeight: '600',
+  },
+  statusBanner: {
+    backgroundColor: '#f5f5f5',
+    padding: 12,
+    borderRadius: 12,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  statusItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  online: {
+    backgroundColor: '#4CAF50',
+  },
+  offline: {
+    backgroundColor: '#F44336',
+  },
+  statusText: {
+    fontSize: 12,
+    color: '#666',
   },
 });
