@@ -5,11 +5,11 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import Colors from '../../constants/Colors';
 import { PlantCard } from '../../components/PlantCard';
 import { authAPI } from '../../services/api';
@@ -22,6 +22,16 @@ interface Item {
 }
 
 export default function Dashboard() {
+  const router = useRouter();
+
+  // Use mock data directly to match design request
+  const items = [
+    { id: 1, name: 'Rice Plant', status: 'Growing', ph: 6.5, day: 5, progress: 52 },
+    { id: 2, name: 'Rice Plant', status: 'Growing', ph: 6.4, day: 7, progress: 52 },
+  ];
+
+  /* 
+  // Commented out backend integration for UI demo purposes
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,80 +52,61 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
+  */
 
   const handleAddPlant = () => {
-    Alert.alert('Coming Soon', 'Add new plant feature coming soon!');
+    console.log('Navigating to shelves identification...');
+    router.push('/shelves-identification');
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>HydroGrow</Text>
-          <Text style={styles.subtitle}>Dashboard</Text>
+      {/* Top Bar with Logo and Notifications */}
+      <View style={styles.topBar}>
+        <View style={styles.logoContainer}>
+            <MaterialCommunityIcons name="sprout" size={24} color="#4A4A4A" style={styles.logoIcon}/>
+            <Text style={styles.appName}>HydroGrow</Text>
         </View>
         <TouchableOpacity>
           <Ionicons name="notifications-outline" size={24} color="black" />
         </TouchableOpacity>
       </View>
 
-      {loading ? (
-        <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Dashboard Title Section */}
+        <View style={styles.dashboardHeader}>
+          <Text style={styles.dashboardTitle}>Dashboard</Text>
+          <Text style={styles.dashboardSubtitle}>Smart Hydroponic System</Text>
         </View>
-      ) : error ? (
-        <View style={styles.centerContent}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={loadItems}
-          >
-            <Text style={styles.retryText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* Add Button Area */}
-          <TouchableOpacity
+
+        {/* Add Button Area */}
+        <TouchableOpacity
             style={styles.addCard}
             onPress={handleAddPlant}
-          >
+            activeOpacity={0.8}
+        >
             <Text style={styles.addText}>Add</Text>
-            <Ionicons name="add-circle-outline" size={32} color="black" />
-          </TouchableOpacity>
-
-          <Text style={styles.sectionTitle}>Current Plants</Text>
-
-          {/* Plant Cards */}
-          {items.length > 0 ? (
-            items.map((item) => (
-              <PlantCard
-                key={item.id}
-                plantName={item.name}
-                shelf={`Shelf 0${item.id}`}
-                day={5}
-                progress={52}
-                status={item.status}
-                onPress={() => Alert.alert(item.name, `pH Level: ${item.ph}`)}
-              />
-            ))
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Ionicons
-                name="leaf-outline"
-                size={64}
-                color={Colors.gray}
-                style={{ marginBottom: 16 }}
-              />
-              <Text style={styles.emptyText}>No plants yet</Text>
-              <Text style={styles.emptySubText}>
-                Add your first hydroponic plant to get started
-              </Text>
+            <View style={styles.addIconContainer}>
+                <Ionicons name="add" size={28} color="black" />
             </View>
-          )}
-        </ScrollView>
-      )}
+        </TouchableOpacity>
+
+        <Text style={styles.sectionTitle}>Current Plants</Text>
+
+        {/* Plant Cards - Displayed directly from mock data */}
+        { items.map((item) => (
+        <PlantCard
+            key={item.id}
+            plantName={item.name}
+            shelf={`Shelf 0${item.id}`}
+            day={item.day}
+            progress={item.progress}
+            status={item.status}
+            onPress={() => router.push('/plant-details')}
+        />
+        ))}
+        
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -125,58 +116,84 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.white,
   },
-  header: {
+  topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    paddingVertical: 10,
+    backgroundColor: Colors.white,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  logoIcon: {
+    backgroundColor: '#333',
+    borderRadius: 8,
+    padding: 2,
+    color: 'white',
+  },
+  appName: {
+    fontSize: 18,
+    fontWeight: '600',
     color: '#333',
   },
-  subtitle: {
+  dashboardHeader: {
+    paddingHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  dashboardTitle: {
+    fontSize: 28,
+    fontWeight: '400',
+    color: '#333',
+  },
+  dashboardSubtitle: {
     fontSize: 14,
     color: '#666',
     marginTop: 4,
   },
   scrollContent: {
-    flexGrow: 1,
-    paddingVertical: 16,
+    paddingBottom: 20,
   },
   centerContent: {
-    flex: 1,
+    height: 300,
     justifyContent: 'center',
     alignItems: 'center',
   },
   addCard: {
-    backgroundColor: Colors.lightGray,
-    paddingVertical: 30,
-    paddingHorizontal: 20,
-    borderRadius: 20,
+    backgroundColor: '#EAEAEA',
+    height: 160,
+    borderRadius: 24,
     alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'center',
+    marginBottom: 30,
     marginHorizontal: 20,
   },
   addText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
     color: '#333',
-    marginBottom: 8,
+    marginBottom: 10,
+  },
+  addIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#333',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '500',
     color: '#333',
     marginHorizontal: 20,
-    marginBottom: 12,
+    marginBottom: 15,
   },
   emptyContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,

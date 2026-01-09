@@ -106,10 +106,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   statusBadge: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: '#0F766E', // Darker shade of teal/green for the badge
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 12,
     marginBottom: 12,
     alignSelf: 'flex-start',
   },
@@ -134,16 +134,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   progressBarBg: {
-    height: 8,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 4,
+    height: 10,
+    backgroundColor: '#CCFBF1', // Very light teal/white for track
+    borderRadius: 5,
     marginVertical: 10,
     overflow: 'hidden',
   },
   progressBarFill: {
-    height: 8,
-    backgroundColor: Colors.secondary,
-    borderRadius: 4,
+    height: 10,
+    backgroundColor: '#115E59', // Dark teal for progress
+    borderRadius: 5,
   },
   stagesRow: {
     flexDirection: 'row',
