@@ -86,3 +86,37 @@ async def video_feed():
         generate_video(), 
         media_type="multipart/x-mixed-replace; boundary=frame"
     )
+
+# --- 5. CONTROL COMMANDS ---
+@router.post("/api/control")
+async def send_control_command(command: dict):
+    """Send control command to ESP32 devices"""
+    target = command.get("target")  # "mobile" or "stationary"
+    
+    # Process the command
+    success = await control_service.process_command(command)
+    
+    if not success:
+        return {"success": False, "error": "Invalid component"}
+    
+    # Send command to the device via WebSocket
+    sent = await manager.send_command(target, command)
+    
+    if sent:
+        return {"success": True, "message": f"Command sent to {target}"}
+    else:
+        return {"success": False, "error": f"{target} device not connected"}
+
+@router.get("/api/state")
+async def get_system_state():
+    """Get current system state"""
+    from app.services.state_store import global_state
+    return global_state
+
+@router.get("/api/devices/status")
+async def get_devices_status():
+    """Check which devices are connected"""
+    return {
+        "mobile": manager.active_connections["mobile"] is not None,
+        "stationary": manager.active_connections["stationary"] is not None
+    }
