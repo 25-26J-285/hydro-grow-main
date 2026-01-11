@@ -1,5 +1,9 @@
-# hydro-guardian-main
-HydroGuardian: An AI-driven automated hydroponic fodder system for Sri Lanka. Featuring ESP32 firmware, Multi-modal Disease Detection (CNN+LSTM), Seed ID, and RL-based Energy Optimization
+# 🌱 HydroGrow - Smart Hydroponic System
+HydroGuardian: An AI-driven automated hydroponic fodder system for Sri Lanka. 
+
+Featuring **ESP32 IoT integration**, **Real-time sensor monitoring**, **Actuator control**, **Multi-modal Disease Detection (CNN+LSTM)**, **Seed Quality Identification**, and **RL-based Energy Optimization**.
+
+**Current Status:** ✅ Full-stack operational with ESP32 device management, WebSocket communication, and comprehensive mobile interface.
 
 ---
 
@@ -34,6 +38,36 @@ Complete setup and testing guide for the entire system:
 
 ---
 
+## 🔌 API Endpoints
+
+### Authentication
+- `POST /api/login` - User login
+- `POST /api/register` - User registration
+- `GET /api/me` - Get current user profile
+
+### Sensors
+- `GET /api/sensors` - Get all sensor readings
+- `GET /api/sensors/{device_id}` - Get specific sensor data
+- `GET /api/sensors/latest` - Get latest readings from all sensors
+
+### Actuators
+- `POST /api/actuators/control` - Control actuator (pump, light, fan)
+- `GET /api/actuators/status` - Get all actuator states
+- `POST /api/actuators/{id}/toggle` - Toggle actuator on/off
+
+### ESP32 Gateway
+- `WS /ws/gateway` - WebSocket for real-time device communication
+- `GET /api/devices` - List all connected ESP32 devices
+- `POST /api/devices/discover` - Trigger device discovery
+- `GET /api/devices/{id}/status` - Get device health status
+
+### Plants & Management
+- `GET /api/items` - Get all plants
+- `GET /api/plants/{id}` - Get plant details
+- `POST /api/plants` - Add new plant
+
+---
+
 ## 🎯 Quick Links
 
 | Resource | Purpose | Link |
@@ -51,12 +85,20 @@ Complete setup and testing guide for the entire system:
 
 ### Frontend
 - ✅ Expo React Native app with file-based routing
-- ✅ Onboarding screen with custom plant logo
-- ✅ Login screen with email/password form
-- ✅ Real API integration (connected to FastAPI backend)
-- ✅ Pre-filled test credentials for quick testing
-- ✅ Loading states and error notifications
-- ✅ Tab navigation and dashboard screens
+- ✅ 15+ screens including setup flow, monitoring, and control
+- ✅ Complete onboarding & authentication system
+- ✅ Real-time sensor monitoring dashboard
+- ✅ ESP32 device control interface
+- ✅ Energy consumption tracking
+- ✅ Setup wizard (shelves, sensors, seed identification)
+- ✅ Actuator control panel
+- ✅ Plant management and details
+- ✅ CO2 and environmental monitoring
+- ✅ Notifications system
+- ✅ 8 reusable UI components
+- ✅ Tab navigation (Home, Plants, Sensors, Energy, Settings)
+- ✅ WebSocket integration for real-time updates
+- ✅ API + WebSocket communication
 
 ### Backend
 - ✅ FastAPI REST API on port 8000
@@ -65,7 +107,14 @@ Complete setup and testing guide for the entire system:
 - ✅ Protected endpoints requiring authentication
 - ✅ CORS enabled for cross-origin requests
 - ✅ Interactive API documentation with Swagger UI
-- ✅ In-memory database (ready for PostgreSQL upgrade)
+- ✅ WebSocket gateway for real-time communication
+- ✅ ESP32 device management and discovery
+- ✅ Actuator control APIs (pumps, lights, fans)
+- ✅ Sensor data collection and processing
+- ✅ ESP32-CAM image capture and streaming
+- ✅ Device state management and monitoring
+- ✅ Real-time sensor data broadcasting
+- ✅ Postman collection for API testing
 
 ---
 
@@ -74,6 +123,16 @@ Complete setup and testing guide for the entire system:
 Email: farmer@example.com
 Password: password123
 ```
+
+### IoT & Hardware Integration
+- ✅ ESP32 microcontroller support
+- ✅ ESP32-CAM for plant monitoring
+- ✅ Real-time sensor data (temperature, humidity, pH, EC, TDS)
+- ✅ Actuator control (water pumps, grow lights, ventilation)
+- ✅ WebSocket-based device communication
+- ✅ Automatic device discovery on network
+- ✅ Device status monitoring and health checks
+- ✅ Multi-device management support
 
 ---
 
@@ -88,9 +147,11 @@ Password: password123
 **Backend:**
 - FastAPI 0.128.0
 - Uvicorn 0.40.0 (ASGI Server)
+- WebSockets (Real-time communication)
 - Pydantic 2.12.5 (Data Validation)
 - PyJWT 2.10.1 (JWT Authentication)
 - Python 3.13
+- Requests (HTTP client for ESP32 communication)
 
 ---
 
