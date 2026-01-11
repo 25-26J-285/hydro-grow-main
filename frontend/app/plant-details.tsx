@@ -116,7 +116,7 @@ export default function PlantDetails() {
                 <Text style={styles.lastUpdated}>Last updated: 2 min ago</Text>
             </View>
 
-            {/* Growth Stage */}
+            {/* Growth Stage detection part */}
             <View style={styles.card}>
                 <Text style={styles.cardTitle}>Growth Stage</Text>
                 <View style={styles.growthInfoRow}>
