@@ -20,7 +20,7 @@ export default function Notifications() {
     </SafeAreaView>
   );
 }
-
+// create notification
 const styles = StyleSheet.create({
   container: {
     flex: 1,
