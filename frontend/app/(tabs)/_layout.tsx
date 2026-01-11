@@ -50,6 +50,15 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="energy"
+        options={{
+          title: 'Energy',
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="lightning-bolt" size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
