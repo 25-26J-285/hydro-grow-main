@@ -47,6 +47,10 @@ export default function LoginScreen() {
     router.push('/(auth)/register');
   };
 
+  const handleSkip = () => {
+    router.replace('/(tabs)/home');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -56,6 +60,9 @@ export default function LoginScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Login</Text>
+          <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+            <Text style={styles.skipText}>Skip</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Main Content */}
@@ -162,13 +169,26 @@ const styles = StyleSheet.create({
   header: {
     height: 60,
     backgroundColor: Colors.primary,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   headerTitle: {
     color: '#fff',
     fontSize: 20,
     fontWeight: '700',
+  },
+  skipButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  skipText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
   },
   mainContent: {
     padding: 20,
