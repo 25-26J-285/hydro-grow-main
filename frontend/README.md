@@ -8,11 +8,13 @@
 ✅ Expo Managed Workflow (no native compilation needed)
 ✅ File-based routing (like Next.js)
 ✅ TypeScript throughout
-✅ 4 reusable UI components
+✅ 8 reusable UI components
 ✅ Complete authentication flow
-✅ API integration with Axios
-✅ Tab navigation
-✅ 5+ ready screens
+✅ API integration with Axios + WebSocket
+✅ Tab navigation with Energy monitoring
+✅ 15+ ready screens (setup flow, sensors, actuators, plants)
+✅ ESP32 device integration
+✅ Real-time sensor monitoring
 ✅ Production-ready patterns
 ✅ Comprehensive documentation
 ```
@@ -66,16 +68,30 @@ HydroGrow/
 │   ├── (auth)/                 # Auth screens
 │   │   ├── login.tsx           # Login form
 │   │   └── register.tsx        # Registration
-│   └── (tabs)/                 # Main app tabs
-│       ├── home.tsx            # Dashboard
-│       ├── plants.tsx          # Plant management
-│       ├── sensors.tsx         # Sensor data
-│       └── settings.tsx        # User settings
+│   ├── (tabs)/                 # Main app tabs
+│   │   ├── home.tsx            # Dashboard
+│   │   ├── plants.tsx          # Plant management
+│   │   ├── sensors.tsx         # Sensor data
+│   │   ├── energy.tsx          # Energy monitoring
+│   │   └── settings.tsx        # User settings
+│   ├── setup-summary.tsx       # Setup summary
+│   ├── shelves-identification.tsx  # Shelf selection
+│   ├── seed-identification.tsx # Seed quality check
+│   ├── sensors-check.tsx       # Sensor validation
+│   ├── actuators-control.tsx   # Actuator control
+│   ├── controls.tsx            # Main controls
+│   ├── plant-details.tsx       # Plant info
+│   ├── co2-grass-details.tsx   # CO2/grass monitoring
+│   └── notifications.tsx       # Notifications
 ├── components/                  # Reusable UI
 │   ├── InputField.tsx          # Text input
 │   ├── CustomButton.tsx        # Buttons
 │   ├── PlantCard.tsx           # Plant card
-│   └── ProgressBar.tsx         # Progress bar
+│   ├── ProgressBar.tsx         # Progress bar
+│   ├── SensorCard.tsx          # Sensor display
+│   ├── SeedQualityCard.tsx     # Seed quality
+│   ├── ShelfSelectionCard.tsx  # Shelf picker
+│   └── TraySlotCard.tsx        # Tray slot info
 ├── services/                    # API & auth
 │   ├── api.ts                  # Axios instance
 │   └── authService.ts          # Auth logic
@@ -103,12 +119,32 @@ HydroGrow/
 - Multi-variant buttons
 - Plant cards with progress
 - Progress bars
+- Sensor status cards
+- Seed quality cards
+- Shelf selection cards
+- Tray slot management cards
 
 ### ✅ API Integration
 - Connected to FastAPI backend
+- WebSocket support for real-time data
+- ESP32 device communication
 - Automatic token injection
 - Error handling & user feedback
 - AsyncStorage for persistence
+
+### ✅ Setup & Onboarding
+- Complete setup flow (shelves, sensors, seeds)
+- Sensor validation and testing
+- Tray and slot identification
+- Setup progress tracking
+- Configuration summary
+
+### ✅ Device Control
+- ESP32 actuator control
+- Real-time sensor monitoring
+- Energy consumption tracking
+- CO2 and environmental monitoring
+- Device discovery and management
 
 ## 📱 Supported Platforms
 
@@ -218,14 +254,67 @@ User Interface (React Components)
 <ProgressBar progress={52} />
 ```
 
+### SensorCard
+```typescript
+<SensorCard
+  sensorType="Temperature"
+  value="25°C"
+  status="Normal"
+  lastUpdate="2 min ago"
+/>
+```
+
+### SeedQualityCard
+```typescript
+<SeedQualityCard
+  seedType="Rice"
+  quality="High"
+  germination={95}
+/>
+```
+
+### ShelfSelectionCard
+```typescript
+<ShelfSelectionCard
+  shelfNumber={1}
+  capacity={12}
+  selected={true}
+  onSelect={handleSelect}
+/>
+```
+
+### TraySlotCard
+```typescript
+<TraySlotCard
+  trayId="T1"
+  slotNumber={3}
+  occupied={true}
+  plantName="Lettuce"
+/>
+```
+
 ## 🌐 API Endpoints
 
+### Authentication
 | Method | Endpoint | Purpose |
-|--------|----------|---------|
+|--------|----------|---------||
 | POST | `/api/login` | Login |
 | POST | `/api/register` | Register |
 | GET | `/api/me` | Get profile |
+
+### Plants & Sensors
+| Method | Endpoint | Purpose |
+|--------|----------|---------||
 | GET | `/api/items` | Get plants |
+| GET | `/api/sensors` | Get sensor data |
+| GET | `/api/sensors/{id}` | Get specific sensor |
+
+### ESP32 Devices
+| Method | Endpoint | Purpose |
+|--------|----------|---------||
+| GET | `/api/devices` | List devices |
+| POST | `/api/actuators/control` | Control actuator |
+| WS | `/ws/gateway` | WebSocket for real-time |
 
 ## 🧪 Test Data
 
@@ -376,9 +465,9 @@ MIT
 
 **Status**: ✅ Ready for development
 
-**Last Updated**: December 31, 2025
+**Last Updated**: January 11, 2026
 
-**Version**: 1.0.0
+**Version**: 1.5.0
 
 ---
 
