@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   refreshCard: {
-    backgroundColor: '#EAEAEA', // Light gray background
+    backgroundColor: '#EAEAEA', // {Light gray background}
     height: 140,
     borderRadius: 20,
     marginHorizontal: 20,
