@@ -77,3 +77,76 @@ const styles = StyleSheet.create({
     color: '#374151',
     fontWeight: '600',
   },
+
+   /* Cards */
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    elevation: 2,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#111827',
+  },
+
+  cameraPlaceholder: {
+    height: 140,
+    backgroundColor: '#4B5563',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  liveViewText: {
+    color: '#fff',
+  },
+  lastUpdated: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+
+  /* Disease */
+  diseaseItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  diseaseIconBox: {
+    width: 48,
+    height: 48,
+    backgroundColor: '#4B5563',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  diseaseInfo: {
+    flex: 1,
+  },
+  diseaseTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  diseaseSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  shieldIcon: {
+    backgroundColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 4,
+  },
+});
+
+export default styles;
