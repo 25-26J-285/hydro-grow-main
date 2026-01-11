@@ -26,3 +26,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+
+  logoIcon: {
+    backgroundColor: Colors.primary,
+    borderRadius: 6,
+    padding: 4,
+  },
+  appName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+
+  scrollContent: {
+    padding: 20,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 12,
+  },
+
+  /* Toggle */
+  toggleContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    padding: 2,
+    marginBottom: 20,
+    alignSelf: 'center',
+    width: 200,
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: 6,
+    alignItems: 'center',
+    borderRadius: 6,
+  },
+  toggleButtonActive: {
+    backgroundColor: '#fff',
+    elevation: 1,
+  },
+  toggleText: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  toggleTextActive: {
+    color: '#374151',
+    fontWeight: '600',
+  },
