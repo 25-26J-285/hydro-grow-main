@@ -7,7 +7,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
 
-  /* Top Bar */
+  /* Top Bar part*/
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
