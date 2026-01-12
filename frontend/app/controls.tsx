@@ -13,6 +13,8 @@ export default function Controls() {
 
   const phTargets = ['5.5', '6.0', '6.2', '6.5'];
 
+  //molinda controls screen
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
