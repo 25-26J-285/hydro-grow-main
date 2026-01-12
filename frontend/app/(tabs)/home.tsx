@@ -61,7 +61,7 @@ export default function Dashboard() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Top Bar with Logo and Notifications */}
+      {/* Top Bar with Logo and Notifications of the app*/}
       <View style={styles.topBar}>
         <View style={styles.logoContainer}>
             <MaterialCommunityIcons name="sprout" size={24} color="#4A4A4A" style={styles.logoIcon}/>
