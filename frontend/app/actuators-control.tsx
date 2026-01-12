@@ -13,6 +13,7 @@ import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { TraySlotCard } from '../components/TraySlotCard';
 
+// molinda actuators control
 export default function ActuatorsControl() {
   const router = useRouter();
 
@@ -47,25 +48,25 @@ export default function ActuatorsControl() {
 
   const handleSlotToggle = (id: number) => {
     setSlots(currentSlots => currentSlots.map(slot => {
-        if (slot.id === id) {
-            // Toggle between active (Connect) and inactive (Disconnect)
-            // Even if it was 'error', clicking it will reset it to active or inactive.
-            // Let's assume 'Connect' -> 'Disconnect' (gray)
-            // 'Disconnect' (gray or error) -> 'Connect' (light blue)
-            if (slot.status === 'Connect') {
-                return { ...slot, variant: 'inactive', status: 'Disconnect' };
-            } else {
-                return { ...slot, variant: 'active', status: 'Connect' };
-            }
+      if (slot.id === id) {
+        // Toggle between active (Connect) and inactive (Disconnect)
+        // Even if it was 'error', clicking it will reset it to active or inactive.
+        // Let's assume 'Connect' -> 'Disconnect' (gray)
+        // 'Disconnect' (gray or error) -> 'Connect' (light blue)
+        if (slot.status === 'Connect') {
+          return { ...slot, variant: 'inactive', status: 'Disconnect' };
+        } else {
+          return { ...slot, variant: 'active', status: 'Connect' };
         }
-        return slot;
+      }
+      return slot;
     }));
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      
+
       {/* Top Bar */}
       <View style={styles.topBar}>
         <View style={styles.logoContainer}>
@@ -82,8 +83,8 @@ export default function ActuatorsControl() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header Section */}
         <View style={styles.headerSection}>
-            <Text style={styles.pageTitle}>Actuators</Text>
-            <Text style={styles.pageSubtitle}>Smart Hydroponic System</Text>
+          <Text style={styles.pageTitle}>Actuators</Text>
+          <Text style={styles.pageSubtitle}>Smart Hydroponic System</Text>
         </View>
 
         {/* Live Plant View Card */}
@@ -91,17 +92,17 @@ export default function ActuatorsControl() {
           <TouchableOpacity style={styles.arrowLeft}>
             <Ionicons name="chevron-back" size={24} color="black" />
           </TouchableOpacity>
-          
+
           <View style={styles.cameraContent}>
-             <TouchableOpacity style={styles.expandIcon}>
-                <MaterialCommunityIcons name="arrow-expand-all" size={20} color="#333" />
-             </TouchableOpacity>
-             <Text style={styles.cameraText}>Live Plant View</Text>
-             <Ionicons name="camera" size={24} color="#666" style={{marginTop: 8}} />
+            <TouchableOpacity style={styles.expandIcon}>
+              <MaterialCommunityIcons name="arrow-expand-all" size={20} color="#333" />
+            </TouchableOpacity>
+            <Text style={styles.cameraText}>Live Plant View</Text>
+            <Ionicons name="camera" size={24} color="#666" style={{ marginTop: 8 }} />
           </View>
 
           <TouchableOpacity style={styles.arrowRight}>
-             <Ionicons name="chevron-forward" size={24} color="black" />
+            <Ionicons name="chevron-forward" size={24} color="black" />
           </TouchableOpacity>
         </View>
 
@@ -110,27 +111,27 @@ export default function ActuatorsControl() {
         {/* Slots Grid */}
         <View style={styles.gridContainer}>
           {slots.map((slot) => (
-             <TraySlotCard 
-                key={slot.id}
-                slotNumber={slot.num}
-                variant={slot.variant as any}
-                statusText={slot.status}
-                onPress={() => handleSlotToggle(slot.id)}
-             />
+            <TraySlotCard
+              key={slot.id}
+              slotNumber={slot.num}
+              variant={slot.variant as any}
+              statusText={slot.status}
+              onPress={() => handleSlotToggle(slot.id)}
+            />
           ))}
         </View>
-        
+
         {/* Footer Buttons */}
         <View style={styles.footer}>
-           {/* BACK Button */}
-           <TouchableOpacity style={styles.footerBtnBack} onPress={handleBack}>
-             <Text style={styles.footerBtnText}>BACK</Text>
-           </TouchableOpacity>
+          {/* BACK Button */}
+          <TouchableOpacity style={styles.footerBtnBack} onPress={handleBack}>
+            <Text style={styles.footerBtnText}>BACK</Text>
+          </TouchableOpacity>
 
-           {/* NEXT Button */}
-           <TouchableOpacity style={styles.footerBtnNext} onPress={handleNext}>
-             <Text style={styles.footerBtnText}>NEXT</Text>
-           </TouchableOpacity>
+          {/* NEXT Button */}
+          <TouchableOpacity style={styles.footerBtnNext} onPress={handleNext}>
+            <Text style={styles.footerBtnText}>NEXT</Text>
+          </TouchableOpacity>
         </View>
 
       </ScrollView>
@@ -197,22 +198,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   cameraContent: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      height: '100%',
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100%',
   },
   arrowLeft: {
-      padding: 10,
+    padding: 10,
   },
   arrowRight: {
-      padding: 10,
+    padding: 10,
   },
   expandIcon: {
-      position: 'absolute',
-      top: 10,
-      right: 10,
-      padding: 5,
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    padding: 5,
   },
   cameraText: {
     fontSize: 14,

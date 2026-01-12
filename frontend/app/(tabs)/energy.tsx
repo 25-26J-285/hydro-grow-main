@@ -1,10 +1,12 @@
 import React from 'react';
 import { View, StyleSheet, Text, ScrollView, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/Colors';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
+// molinda energy
 export default function Energy() {
   const router = useRouter();
 
