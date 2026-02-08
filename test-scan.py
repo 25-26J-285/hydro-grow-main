@@ -15,7 +15,7 @@ init()
 BASE_URL = "http://127.0.0.1:8000"
 
 def print_header():
-    print(f"\n{Fore.CYAN}🧪 HydroGrow Shelf Scanning Test{Style.RESET_ALL}")
+    print(f"\n{Fore.CYAN} HydroGrow Shelf Scanning Test{Style.RESET_ALL}")
     print(f"{Fore.CYAN}================================={Style.RESET_ALL}\n")
 
 def test_connection():
