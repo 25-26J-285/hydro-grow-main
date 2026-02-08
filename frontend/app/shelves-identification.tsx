@@ -5,19 +5,32 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  StatusBar
+  StatusBar,
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Colors from '../constants/Colors';
 import { ShelfSelectionCard } from '../components/ShelfSelectionCard';
+import api from '../services/api';
+
+interface Shelf {
+  id: number;
+  name: string;
+  status: string;
+  day: number;
+  stage: string;
+  variant: 'active' | 'empty';
+}
 
 export default function ShelvesIdentification() {
   const router = useRouter();
-  const [selectedShelfId, setSelectedShelfId] = useState<number>(3); // Default selection based on screenshot
-
-  const shelves = [
+  const [selectedShelfId, setSelectedShelfId] = useState<number>(3);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
+  const [shelves, setShelves] = useState<Shelf[]>([
     {
       id: 3,
       name: 'Shelf 03 - Rice Plant',
@@ -29,7 +42,7 @@ export default function ShelvesIdentification() {
     {
       id: 4,
       name: 'Shelf 04 - Empty',
-      status: 'Day 1 - Growing', // Keeping text from screenshot even if logic is odd for "empty"
+      status: 'Day 1 - Growing',
       day: 1,
       stage: 'Seed',
       variant: 'empty' as const,
@@ -42,7 +55,62 @@ export default function ShelvesIdentification() {
       stage: 'Seed',
       variant: 'empty' as const,
     }
-  ];
+  ]);
+
+  const handleScan = async () => {
+    try {
+      setIsScanning(true);
+      setScanProgress(0);
+
+      Alert.alert(
+        'Starting Scan',
+        'The mobile ESP32-CAM will now scan all shelves from top-right to bottom-left. This may take a few moments.',
+        [{ text: 'OK' }]
+      );
+
+      // Use mock scan for testing (change to /api/scan/start for real ESP32)
+      const useMockScan = true; // Set to false when ESP32 is connected
+      const endpoint = useMockScan ? '/api/scan/mock' : '/api/scan/start';
+      
+      // Start the scan
+      const response = await api.post(endpoint);
+      
+      if (response.data.success) {
+        // Update shelves with scan results
+        const scannedShelves: Shelf[] = response.data.shelves.map((shelf: any) => ({
+          id: shelf.shelf_id,
+          name: shelf.shelf_name,
+          status: shelf.has_plant 
+            ? `${shelf.stage} - ${Math.round(shelf.avg_confidence)}% confidence`
+            : 'Empty',
+          day: 1,
+          stage: shelf.stage,
+          variant: shelf.has_plant ? 'active' : 'empty',
+        }));
+
+        setShelves(scannedShelves);
+        
+        const scanType = response.data.is_simulation ? '🧪 SIMULATION' : '';
+        Alert.alert(
+          'Scan Complete',
+          `${scanType}\nFound plants on ${response.data.shelves.filter((s: any) => s.has_plant).length} shelf(s)`,
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert('Scan Failed', response.data.message || 'Failed to complete scan');
+      }
+    } catch (error: any) {
+      console.error('Scan error:', error);
+      Alert.alert(
+        'Scan Error',
+        error.response?.data?.message || 'Failed to start scan. Make sure the ESP32 devices are connected.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsScanning(false);
+      setScanProgress(100);
+    }
+  };
 
   const handleNext = () => {
     router.push('/seed-identification');
@@ -73,11 +141,27 @@ export default function ShelvesIdentification() {
         </View>
 
         {/* Scan Area */}
-        <TouchableOpacity style={styles.scanCard} activeOpacity={0.8}>
-          <Text style={styles.scanText}>Scan</Text>
-          <View style={styles.scanIconContainer}>
-             <MaterialCommunityIcons name="barcode-scan" size={32} color="#333" />
-          </View>
+        <TouchableOpacity 
+          style={[styles.scanCard, isScanning && styles.scanCardActive]} 
+          activeOpacity={0.8}
+          onPress={handleScan}
+          disabled={isScanning}
+        >
+          {isScanning ? (
+            <>
+              <ActivityIndicator size="large" color="#00A859" style={{ marginBottom: 12 }} />
+              <Text style={styles.scanText}>Scanning Shelves...</Text>
+              <Text style={styles.scanSubtext}>Moving ESP32-CAM across structure</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.scanText}>Scan</Text>
+              <View style={styles.scanIconContainer}>
+                <MaterialCommunityIcons name="barcode-scan" size={32} color="#333" />
+              </View>
+              <Text style={styles.scanSubtext}>Tap to start automated shelf scan</Text>
+            </>
+          )}
         </TouchableOpacity>
 
         <Text style={styles.sectionTitle}>Available Shelves</Text>
@@ -167,11 +251,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  scanCardActive: {
+    backgroundColor: '#E8F5E9', // Light green when scanning
+  },
   scanText: {
     fontSize: 16,
     color: '#333',
     marginBottom: 12,
     fontWeight: '500',
+  },
+  scanSubtext: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 8,
   },
   scanIconContainer: {
     // width: 48,

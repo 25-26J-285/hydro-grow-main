@@ -61,6 +61,12 @@ Complete setup and testing guide for the entire system:
 - `POST /api/devices/discover` - Trigger device discovery
 - `GET /api/devices/{id}/status` - Get device health status
 
+### Mock Data (Testing without Hardware)
+- `POST /api/sensors/mock/start` - Start mock sensor data generation
+- `POST /api/sensors/mock/stop` - Stop mock sensor simulation
+- `GET /api/sensors/mock/status` - Check mock sensor status
+- `POST /api/scan/mock` - Simulate shelf scanning
+
 ### Plants & Management
 - `GET /api/items` - Get all plants
 - `GET /api/plants/{id}` - Get plant details
