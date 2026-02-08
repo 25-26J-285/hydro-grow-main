@@ -1,6 +1,6 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request, Response
 from fastapi.responses import StreamingResponse
-from app.services import sensor_service, image_service, control_service
+from app.services import sensor_service, image_service, control_service, scan_service, mock_scan_service, mock_sensor_service
 import asyncio
 
 router = APIRouter()
@@ -120,3 +120,77 @@ async def get_devices_status():
         "mobile": manager.active_connections["mobile"] is not None,
         "stationary": manager.active_connections["stationary"] is not None
     }
+
+# --- 6. SHELF SCANNING ---
+@router.post("/api/scan/start")
+async def start_scan():
+    """
+    Start automated shelf scanning
+    Moves mobile ESP32-CAM from top-right to bottom-left
+    Captures and analyzes images at each position
+    """
+    async def send_command_wrapper(command: dict):
+        """Wrapper to send commands via WebSocket"""
+        await control_service.process_command(command)
+        return await manager.send_command(command["target"], command)
+    
+    # Start scan in background task
+    result = await scan_service.start_shelf_scan(send_command_wrapper)
+    return result
+
+@router.get("/api/scan/status")
+async def get_scan_status():
+    """Get current scan progress"""
+    return scan_service.get_scan_status()
+
+@router.post("/api/scan/stop")
+async def stop_scan():
+    """Stop ongoing scan"""
+    return scan_service.stop_scan()
+
+# --- 7. MOCK SCANNING (For Testing Without ESP32) ---
+@router.post("/api/scan/mock")
+async def start_mock_scan():
+    """
+    Start simulated shelf scanning for testing
+    No ESP32 hardware required - generates random plant detections
+    """
+    result = await mock_scan_service.simulate_shelf_scan()
+    return result
+
+@router.get("/api/scan/mock/status")
+async def get_mock_scan_status():
+    """Get current mock scan progress"""
+    return mock_scan_service.get_mock_scan_status()
+
+# --- 8. MOCK SENSORS (For Testing Without ESP32) ---
+@router.post("/api/sensors/mock/start")
+async def start_mock_sensors(update_interval: float = 2.0):
+    """
+    Start generating mock sensor data continuously
+    No ESP32 hardware required - simulates realistic sensor readings
+    
+    Args:
+        update_interval: Seconds between updates (default: 2.0)
+    """
+    result = await mock_sensor_service.start_mock_sensors(update_interval)
+    return result
+
+@router.post("/api/sensors/mock/stop")
+async def stop_mock_sensors():
+    """Stop generating mock sensor data"""
+    result = await mock_sensor_service.stop_mock_sensors()
+    return result
+
+@router.get("/api/sensors/mock/status")
+async def get_mock_sensors_status():
+    """Get current status of mock sensor simulation"""
+    return mock_sensor_service.get_mock_sensor_status()
+
+@router.get("/api/sensors/mock/snapshot")
+async def get_mock_snapshot():
+    """
+    Generate a single snapshot of all sensor data
+    Useful for one-time testing without continuous simulation
+    """
+    return mock_sensor_service.generate_single_snapshot()

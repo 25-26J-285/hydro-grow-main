@@ -58,6 +58,19 @@ curl -X POST http://localhost:8000/api/register `
   -d '{"email":"new@example.com","password":"pass123","fullname":"Name"}'
 ```
 
+**Mock Sensors (Testing without ESP32):**
+```powershell
+# Start mock sensor data generation
+curl -X POST http://localhost:8000/api/sensors/mock/start
+
+# Check sensor readings
+curl http://localhost:8000/api/sensor/temp
+curl http://localhost:8000/api/sensors/all
+
+# Stop mock sensors
+curl -X POST http://localhost:8000/api/sensors/mock/stop
+```
+
 ---
 
 ## ✅ Checklist
