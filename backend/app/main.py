@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status,UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
@@ -10,7 +10,16 @@ from app.routers import esp32_gateway
 from app.api import sensors
 from app.api import actuators
 import threading
+import numpy as np
+import tensorflow as tf
+import io
+import os
+import uuid
+import keras
 from app.services.discovery import run_discovery_service
+
+IMAGES_DIR = "images"
+os.makedirs(IMAGES_DIR, exist_ok=True)
 
 # Configuration
 SECRET_KEY = "your-secret-key-change-this-in-production"
@@ -190,6 +199,82 @@ async def list_items(current_user: dict = Depends(get_current_user)):
         ],
         "user": current_user["email"]
     }
+
+IMAGE_SIZE = (384, 384)
+
+image_class_type_dirs = [
+    'BG 360', 'AT 362', 'BW 367', 'BG 357'
+    # ⚠️ add ALL rice types in the SAME order as training
+]
+
+image_class_quality_dirs = ["Bad", "Good"]    
+model = tf.keras.models.load_model("D:/LEC/Research/Backend New/backend/backend/app/best_rice_model_convNext_V3.keras")
+print("✅ Rice model loaded")
+def preprocess_image(image_bytes):
+    # image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    # image = image.resize(IMAGE_SIZE)
+    # image = np.array(image).astype(np.float32)
+    image = tf.io.decode_jpeg(
+        image_bytes,
+        channels=3
+    )
+    # image = tf.image.decode_image(image_bytes,channels=3, expand_animations=False)
+    image_resized = tf.image.resize(image,IMAGE_SIZE)
+
+    # ---- Preprocess for ResNet50 ----
+    # model_input = tf.keras.applications.resnet50.preprocess_input(image_resized)
+    model_input = tf.keras.applications.convnext.preprocess_input(image_resized)
+    model_input = tf.expand_dims(model_input, axis=0)
+
+    return model_input
+
+@app.post("/api/predict-rice")
+async def predict_rice(file: UploadFile = File(...)):
+    image_bytes = await file.read()
+    image_id = str(uuid.uuid4())
+    # ------------------
+    # Save original image
+    # ------------------
+    original_path = f"{IMAGES_DIR}/{image_id}_original.jpg"
+    with open(original_path, "wb") as f:
+        f.write(image_bytes)
+
+    model_input= preprocess_image(image_bytes)
+    # ------------------
+    # Save processed image
+    # ------------------
+    # processed_path = f"{IMAGES_DIR}/{image_id}_processed.jpg"
+    # processed_uint8 = tf.cast(processed_image, tf.uint8)
+    # encoded_img = tf.io.encode_jpeg(processed_uint8)
+    # tf.io.write_file(processed_path, encoded_img)
+
+    predictions = model.predict(model_input, verbose=0)
+
+    type_probs = predictions["type"][0]
+    quality_probs = predictions["quality"][0]
+
+    # type_idx = int(np.argmax(type_probs))
+    # quality_idx = int(np.argmax(quality_probs))
+    type_idx = np.argmax(type_probs)
+    quality_idx = np.argmax(quality_probs)
+
+    return {
+        "rice_type": image_class_type_dirs[type_idx],
+        "rice_type_confidence": float(type_probs[type_idx]),
+        "rice_quality": image_class_quality_dirs[quality_idx],
+        "rice_quality_confidence": float(quality_probs[quality_idx]),
+        "top_type_predictions": [
+            {
+                "name": image_class_type_dirs[i],
+                "confidence": float(type_probs[i])
+            }
+            for i in np.argsort(type_probs)[::-1][:3]
+        ],
+        "quality_probabilities": {
+            image_class_quality_dirs[i]: float(quality_probs[i])
+            for i in range(len(image_class_quality_dirs))
+        }
+    }    
 
 if __name__ == "__main__":
     import uvicorn
