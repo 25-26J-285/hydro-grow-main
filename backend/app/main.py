@@ -17,6 +17,9 @@ import os
 import uuid
 import keras
 from app.services.discovery import run_discovery_service
+from app.services import image_service
+from ultralytics import YOLO
+import cv2
 
 IMAGES_DIR = "images"
 os.makedirs(IMAGES_DIR, exist_ok=True)
@@ -210,6 +213,15 @@ image_class_type_dirs = [
 image_class_quality_dirs = ["Bad", "Good"]    
 model = tf.keras.models.load_model("D:/LEC/Research/Backend New/backend/backend/app/best_rice_model_convNext_V3.keras")
 print("✅ Rice model loaded")
+
+# ============ Load YOLO Model for Germination Stage Detection ============
+yolo_model_path = os.path.join(os.path.dirname(__file__), "models", "germination-stage.pt")
+if os.path.exists(yolo_model_path):
+    yolo_model = YOLO(yolo_model_path, task='detect')
+    print("✅ YOLO Germination model loaded")
+else:
+    yolo_model = None
+    print("⚠️ YOLO model not found at:", yolo_model_path)
 def preprocess_image(image_bytes):
     # image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     # image = image.resize(IMAGE_SIZE)
@@ -275,6 +287,137 @@ async def predict_rice(file: UploadFile = File(...)):
             for i in range(len(image_class_quality_dirs))
         }
     }    
+
+# ============ GERMINATION DETECTION HELPER ============
+def detect_germination_from_frame(frame, image_id: str, confidence_threshold: float = 0.5, camera_source: str = "unknown"):
+
+    if yolo_model is None:
+        raise HTTPException(
+            status_code=500,
+            detail="YOLO germination model not loaded. Please ensure my_model.pt is in the backend/app/models/ directory"
+        )
+    
+    # Run YOLO inference
+    results = yolo_model(frame, verbose=False, conf=confidence_threshold)
+    
+    # Extract detections
+    detections = results[0].boxes
+    germination_stages = []
+    
+    # Get class labels
+    labels = yolo_model.names
+    
+    # Process each detection
+    for detection in detections:
+        # Get bounding box coordinates
+        xyxy = detection.xyxy.cpu().numpy().squeeze().astype(int)
+        if xyxy.ndim == 1:  # Single detection case
+            xmin, ymin, xmax, ymax = xyxy
+        else:
+            xmin, ymin, xmax, ymax = xyxy
+        
+        # Get class info
+        class_idx = int(detection.cls.item())
+        class_name = labels[class_idx]
+        confidence = float(detection.conf.item())
+        
+        # Calculate width and height
+        width = int(xmax - xmin)
+        height = int(ymax - ymin)
+        
+        germination_stages.append({
+            "stage": class_name,
+            "confidence": confidence,
+            "bounding_box": {
+                "x_min": int(xmin),
+                "y_min": int(ymin),
+                "x_max": int(xmax),
+                "y_max": int(ymax),
+                "width": width,
+                "height": height
+            }
+        })
+    
+    # Save original image
+    original_path = f"{IMAGES_DIR}/{image_id}_{camera_source}_original.jpg"
+    cv2.imwrite(original_path, frame)
+    
+    # Save annotated image with detections
+    annotated_frame = results[0].plot()
+    annotated_path = f"{IMAGES_DIR}/{image_id}_{camera_source}_annotated.jpg"
+    cv2.imwrite(annotated_path, annotated_frame)
+    
+    return {
+        "image_id": image_id,
+        "camera_source": camera_source,
+        "total_detections": len(germination_stages),
+        "germination_stages": germination_stages,
+        "original_image_path": original_path,
+        "annotated_image_path": annotated_path
+    }
+
+# ============ ENDPOINT 1: IoT CAM Detection ============
+@app.post("/api/detect-germination/iot-cam")
+async def detect_germination_iot_cam(confidence_threshold: float = 0.5):
+
+    # Get latest frame from image service (stored by ESP32-CAM)
+    jpeg_frame = image_service.get_current_frame()
+    
+    if jpeg_frame is None:
+        raise HTTPException(
+            status_code=503,
+            detail="No frames available from ESP32-CAM. Make sure the IoT camera is connected and sending frames to /api/upload-frame"
+        )
+    
+    # Decode JPEG to OpenCV format
+    nparr = np.frombuffer(jpeg_frame, np.uint8)
+    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    
+    if frame is None:
+        raise HTTPException(status_code=400, detail="Could not decode image from ESP32-CAM")
+    
+    # Generate unique ID for this detection
+    image_id = str(uuid.uuid4())
+    
+    # Run detection
+    return detect_germination_from_frame(
+        frame, 
+        image_id, 
+        confidence_threshold,
+        camera_source="iot-cam"
+    )
+
+# ============ ENDPOINT 2: Mobile Camera Detection ============
+@app.post("/api/detect-germination/mobile-camera")
+async def detect_germination_mobile_camera(file: UploadFile = File(...), confidence_threshold: float = 0.5):
+    
+    # Read image bytes from upload
+    image_bytes = await file.read()
+    image_id = str(uuid.uuid4())
+    
+    # Decode image to OpenCV format
+    nparr = np.frombuffer(image_bytes, np.uint8)
+    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    
+    if frame is None:
+        raise HTTPException(status_code=400, detail="Invalid image file from mobile camera")
+    
+    # Run detection
+    return detect_germination_from_frame(
+        frame, 
+        image_id, 
+        confidence_threshold,
+        camera_source="mobile-camera"
+    )
+
+# ============ BACKWARD COMPATIBILITY ENDPOINT ============
+@app.post("/api/predict-germination")
+async def predict_germination(file: UploadFile = File(...), confidence_threshold: float = 0.5):
+    """
+    Legacy endpoint - redirects to mobile camera detection
+    Use /api/detect-germination/mobile-camera instead
+    """
+    return await detect_germination_mobile_camera(file, confidence_threshold)
 
 if __name__ == "__main__":
     import uvicorn
