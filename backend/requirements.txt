@@ -7,5 +7,5 @@ python-multipart==0.0.6
 sqlalchemy==2.0.23
 PyJWT==2.8.0
 flask==3.1.2
-numpy==2.2.6
-opencv-python==4.12.0.88
+numpy==1.26.3
+opencv-python==4.8.1.78

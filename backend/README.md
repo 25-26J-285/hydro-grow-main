@@ -6,7 +6,7 @@
 
 1. **Activate virtual environment:**
    ```powershell
-   & ".\.venv\Scripts\Activate.ps1"
+   & ".\.venv\Scripts\Activate.ps1" or "python -m venv .venv"
    ```
 
 2. **Install dependencies:**
