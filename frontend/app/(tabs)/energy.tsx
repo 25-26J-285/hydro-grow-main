@@ -1,14 +1,88 @@
-import React from 'react';
-import { View, StyleSheet, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { View, StyleSheet, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { sensorAPI } from '../../services/api';
 
-// molinda energy
+const ELECTRICITY_RATE_PER_KWH = 45; // Rs. per kWh
+
+interface SensorData {
+  temp: number;
+  humidity: number;
+  ph: number;
+  power: number;
+  totalEnergy: number;
+  voltage: number;
+  current: number;
+  energyStatus: string;
+}
+
+interface DeviceStatus {
+  mobile: boolean;
+  stationary: boolean;
+}
+
 export default function Energy() {
   const router = useRouter();
+
+  const [sensors, setSensors] = useState<SensorData>({
+    temp: 0,
+    humidity: 0,
+    ph: 0,
+    power: 0,
+    totalEnergy: 0,
+    voltage: 0,
+    current: 0,
+    energyStatus: 'UNKNOWN',
+  });
+  const [devices, setDevices] = useState<DeviceStatus>({ mobile: false, stationary: false });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const [allRes, energyRes, deviceRes] = await Promise.all([
+        sensorAPI.getAll(),
+        sensorAPI.getEnergy(),
+        sensorAPI.getDeviceStatus(),
+      ]);
+
+      const all = allRes.data;
+      const energy = energyRes.data;
+      const deviceData = deviceRes.data;
+
+      setSensors({
+        temp: all.mobile?.temp ?? 0,
+        humidity: all.mobile?.humidity ?? 0,
+        ph: all.stationary?.ph ?? 0,
+        power: energy.power ?? 0,
+        totalEnergy: energy.total_energy ?? 0,
+        voltage: energy.voltage ?? 0,
+        current: energy.current ?? 0,
+        energyStatus: energy.status ?? 'UNKNOWN',
+      });
+
+      setDevices({
+        mobile: deviceData.mobile?.connected ?? false,
+        stationary: deviceData.stationary?.connected ?? false,
+      });
+
+      setError(null);
+    } catch {
+      setError('Unable to reach server. Check network connection.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 5000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
 
   const handleNotificationPress = () => {
     router.push('/notifications');
@@ -17,6 +91,9 @@ export default function Energy() {
   const handleControlsPress = () => {
     router.push('/controls');
   };
+
+  const cost = (sensors.totalEnergy * ELECTRICITY_RATE_PER_KWH).toFixed(2);
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -27,83 +104,108 @@ export default function Energy() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* System Overview Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>System Overview</Text>
-          <Text style={styles.sectionSubtitle}>ML-powered insights</Text>
-
-          <View style={styles.cardsRow}>
-            {/* Temperature Card */}
-            <View style={styles.card}>
-              <MaterialCommunityIcons name="thermometer" size={32} color={Colors.primary} />
-              <Text style={styles.cardTitle}>Temperature</Text>
-              <Text style={styles.cardValue}>—</Text>
-            </View>
-
-            {/* Humidity Card */}
-            <View style={styles.card}>
-              <MaterialCommunityIcons name="water" size={32} color={Colors.primary} />
-              <Text style={styles.cardTitle}>Humidity</Text>
-              <Text style={styles.cardValue}>—</Text>
-            </View>
-
-            {/* pH Level Card */}
-            <View style={styles.card}>
-              <MaterialCommunityIcons name="flask" size={32} color={Colors.primary} />
-              <Text style={styles.cardTitle}>pH Level</Text>
-              <Text style={styles.cardValue}>—</Text>
-            </View>
-          </View>
+      {error && (
+        <View style={styles.errorBanner}>
+          <Ionicons name="warning-outline" size={16} color="#fff" />
+          <Text style={styles.errorText}>{error}</Text>
         </View>
+      )}
 
-        {/* Plant Camera Section */}
-        <View style={styles.section}>
-          <View style={styles.cameraHeader}>
-            <Text style={styles.sectionTitle}>Plant Camera</Text>
-            <TouchableOpacity>
-              <MaterialCommunityIcons name="camera" size={24} color="#333" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.cameraContainer}>
-            <Text style={styles.cameraPlaceholder}>Live Plant View</Text>
-          </View>
-
-          <Text style={styles.lastUpdated}>Last updated: —</Text>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.loadingText}>Loading sensor data...</Text>
         </View>
-
-        {/* Energy Analytics Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Energy Analytics</Text>
-
-          <View style={styles.analyticsRow}>
-            {/* Current Usage Card */}
-            <View style={[styles.card, styles.analyticsCard]}>
-              <MaterialCommunityIcons name="lightning-bolt" size={28} color="#FFA500" />
-              <Text style={styles.analyticsCardTitle}>Current Usage</Text>
-              <Text style={styles.analyticsCardValue}>—</Text>
+      ) : (
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {/* Device Status Row */}
+          <View style={styles.deviceStatusRow}>
+            <View style={styles.deviceBadge}>
+              <View style={[styles.statusDot, { backgroundColor: devices.mobile ? '#22c55e' : '#ef4444' }]} />
+              <Text style={styles.deviceLabel}>Mobile Unit</Text>
             </View>
-
-            {/* Today's Cost Card */}
-            <View style={[styles.card, styles.analyticsCard]}>
-              <MaterialCommunityIcons name="cash" size={28} color={Colors.primary} />
-              <Text style={styles.analyticsCardTitle}>Today's Cost</Text>
-              <Text style={styles.analyticsCardValue}>—</Text>
+            <View style={styles.deviceBadge}>
+              <View style={[styles.statusDot, { backgroundColor: devices.stationary ? '#22c55e' : '#ef4444' }]} />
+              <Text style={styles.deviceLabel}>Stationary Unit</Text>
             </View>
           </View>
-        </View>
 
-        {/* Controls Section */}
-        <TouchableOpacity style={styles.section} onPress={handleControlsPress}>
-          <Text style={styles.sectionTitle}>Controls</Text>
-          <View style={styles.controlsCard}>
-            <MaterialCommunityIcons name="cog" size={32} color={Colors.primary} />
-            <Text style={styles.controlsText}>Manage your system</Text>
-            <MaterialCommunityIcons name="chevron-right" size={24} color="#ccc" style={styles.chevron} />
+          {/* System Overview Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Energy Prediction</Text>
+            <Text style={styles.sectionSubtitle}>IOT-powered insights</Text>
+
+            <View style={styles.cardsRow}>
+              {/* Temperature Card */}
+              <View style={styles.card}>
+                <MaterialCommunityIcons name="thermometer" size={32} color={Colors.primary} />
+                <Text style={styles.cardTitle}>Temperature</Text>
+                <Text style={styles.cardValue}>{sensors.temp.toFixed(1)} °C</Text>
+              </View>
+
+              {/* Humidity Card */}
+              <View style={styles.card}>
+                <MaterialCommunityIcons name="water" size={32} color={Colors.primary} />
+                <Text style={styles.cardTitle}>Humidity</Text>
+                <Text style={styles.cardValue}>{sensors.humidity.toFixed(1)} %</Text>
+              </View>
+
+              {/* pH Level Card */}
+              <View style={styles.card}>
+                <MaterialCommunityIcons name="flask" size={32} color={Colors.primary} />
+                <Text style={styles.cardTitle}>pH Level</Text>
+                <Text style={styles.cardValue}>{sensors.ph.toFixed(2)}</Text>
+              </View>
+            </View>
           </View>
-        </TouchableOpacity>
-      </ScrollView>
+
+          {/* Energy Analytics Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Energy Analytics</Text>
+
+            <View style={styles.analyticsRow}>
+              {/* Current Usage Card */}
+              <View style={[styles.card, styles.analyticsCard]}>
+                <MaterialCommunityIcons name="lightning-bolt" size={28} color="#FFA500" />
+                <Text style={styles.analyticsCardTitle}>Current Usage</Text>
+                <Text style={styles.analyticsCardValue}>{sensors.power.toFixed(1)} W</Text>
+                <Text style={styles.cardSub}>{sensors.voltage.toFixed(1)} V · {sensors.current.toFixed(2)} A</Text>
+              </View>
+
+              {/* Today's Cost Card */}
+              <View style={[styles.card, styles.analyticsCard]}>
+                <MaterialCommunityIcons name="cash" size={28} color={Colors.primary} />
+                <Text style={styles.analyticsCardTitle}>Today's Cost</Text>
+                <Text style={styles.analyticsCardValue}>Rs. {cost}</Text>
+                <Text style={styles.cardSub}>{sensors.totalEnergy.toFixed(3)} kWh</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Predicted Energy for Tomorrow Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Predicted Energy for Tomorrow</Text>
+            <Text style={styles.sectionSubtitle}>ML Prediction</Text>
+
+            <View style={styles.card}>
+              <MaterialCommunityIcons name="chart-line" size={32} color={Colors.primary} />
+              <Text style={styles.cardTitle}>Estimated Usage</Text>
+              <Text style={styles.cardValue}>{sensors.totalEnergy.toFixed(3)} kWh</Text>
+              <Text style={styles.predictionConfidence}>Confidence: N/A · ML model pending</Text>
+            </View>
+          </View>
+
+          {/* Controls Section */}
+          <TouchableOpacity style={styles.section} onPress={handleControlsPress}>
+            <Text style={styles.sectionTitle}>Controls</Text>
+            <View style={styles.controlsCard}>
+              <MaterialCommunityIcons name="cog" size={32} color={Colors.primary} />
+              <Text style={styles.controlsText}>Manage your system</Text>
+              <MaterialCommunityIcons name="chevron-right" size={24} color="#ccc" style={styles.chevron} />
+            </View>
+          </TouchableOpacity>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -128,8 +230,61 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.primary,
   },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  errorText: {
+    color: '#fff',
+    fontSize: 13,
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    color: '#999',
+    fontSize: 14,
+  },
   scrollContent: {
     paddingBottom: 20,
+  },
+  deviceStatusRow: {
+    flexDirection: 'row',
+    gap: 16,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  deviceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  deviceLabel: {
+    fontSize: 12,
+    color: '#555',
+    fontWeight: '500',
   },
   section: {
     paddingHorizontal: 20,
@@ -177,35 +332,17 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     marginTop: 8,
   },
-  cameraHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+  cardSub: {
+    fontSize: 11,
+    color: '#aaa',
+    marginTop: 4,
+    textAlign: 'center',
   },
-  cameraContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingVertical: 80,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  cameraPlaceholder: {
-    fontSize: 16,
-    color: '#ccc',
-    fontWeight: '600',
-  },
-  lastUpdated: {
+  predictionConfidence: {
     fontSize: 12,
-    color: '#ccc',
+    color: '#999',
     marginTop: 8,
+    textAlign: 'center',
   },
   analyticsRow: {
     flexDirection: 'row',
@@ -252,4 +389,3 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
   },
 });
-

@@ -21,12 +21,12 @@ async def process_mobile_data(data: dict):
     
     # Add Logic: Check for Alerts
     if data.get("temp", 0) > 35.0:
-        print("🔥 ALERT: Temperature is too high!")
+        print("[ALERT] ALERT: Temperature is too high!")
     
     if data.get("air_quality", 0) < 30:
-        print("⚠️  ALERT: Poor air quality detected!")
+        print("[WARN]  ALERT: Poor air quality detected!")
     
-    print(f"📱 Mobile Data: T:{data.get('temp')}°C H:{data.get('hum')}% AQ:{data.get('air_quality')}% L:{data.get('light')}% D:{data.get('dist')}cm")
+    print(f"[Mobile] T:{data.get('temp')}C H:{data.get('hum')}% AQ:{data.get('air_quality')}% L:{data.get('light')}% D:{data.get('dist')}cm")
 
 async def process_stationary_data(data: dict):
     """Process data from stationary ESP32 (pH, energy monitoring)"""
@@ -53,10 +53,10 @@ async def process_stationary_data(data: dict):
     # pH Alert Logic
     ph_value = data.get("ph", 7.0)
     if ph_value < 5.5 or ph_value > 7.5:
-        print(f"⚠️  ALERT: pH out of range: {ph_value}")
+        print(f"[WARN]  ALERT: pH out of range: {ph_value}")
     
     # Energy Alert
     if data.get("energy_status") == "ERROR":
-        print("⚠️  ALERT: Energy monitor disconnected!")
+        print("[WARN]  ALERT: Energy monitor disconnected!")
     
-    print(f"🏠 Stationary Data: pH:{data.get('ph')} Power:{data.get('energy_power')}W Status:{data.get('energy_status')}")
+    print(f"[Stationary] pH:{data.get('ph')} Power:{data.get('energy_power')}W Status:{data.get('energy_status')}")

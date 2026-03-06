@@ -1,5 +1,5 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request, Response
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from app.services import sensor_service, image_service, control_service
 import asyncio
 
@@ -16,11 +16,11 @@ class ConnectionManager:
     async def connect(self, device_type: str, websocket: WebSocket):
         await websocket.accept()
         self.active_connections[device_type] = websocket
-        print(f"✅ {device_type} Connected")
+        print(f"[WS] {device_type} Connected")
 
     def disconnect(self, device_type: str):
         self.active_connections[device_type] = None
-        print(f"❌ {device_type} Disconnected")
+        print(f"[WS] {device_type} Disconnected")
 
     async def send_command(self, target: str, data: dict):
         ws = self.active_connections.get(target)
@@ -120,3 +120,11 @@ async def get_devices_status():
         "mobile": manager.active_connections["mobile"] is not None,
         "stationary": manager.active_connections["stationary"] is not None
     }
+
+@router.get("/api/snapshot")
+async def get_snapshot():
+    """Return the latest camera frame as a JPEG image"""
+    frame = image_service.get_current_frame()
+    if frame is None:
+        return Response(status_code=503, content="No frame available")
+    return Response(content=frame, media_type="image/jpeg")
