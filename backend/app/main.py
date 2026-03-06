@@ -231,7 +231,7 @@ else:
     print("⚠️ TensorFlow not available - Rice model disabled")
 
 # ============ Load YOLO Model for Germination Stage Detection ============
-yolo_model_path = os.path.join(os.path.dirname(__file__), "models", "my_model.pt")
+yolo_model_path = os.path.join(os.path.dirname(__file__), "models", "germination-stage.pt")
 if os.path.exists(yolo_model_path):
     yolo_model = YOLO(yolo_model_path, task='detect')
     print("✅ YOLO Germination model loaded")

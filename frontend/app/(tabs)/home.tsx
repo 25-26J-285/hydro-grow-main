@@ -91,6 +91,44 @@ export default function Dashboard() {
             </View>
         </TouchableOpacity>
 
+        {/* Quick Actions Section */}
+        <View style={styles.quickActionsSection}>
+          <Text style={styles.sectionTitle}>Testing & Tools</Text>
+          <TouchableOpacity 
+            style={styles.actionCard}
+            onPress={() => router.push('/seed-identification')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.actionCardContent}>
+              <View style={styles.actionCardIcon}>
+                <MaterialCommunityIcons name="leaf-circle" size={24} color={Colors.primary} />
+              </View>
+              <View style={styles.actionCardText}>
+                <Text style={styles.actionCardTitle}>Seed Identification</Text>
+                <Text style={styles.actionCardDesc}>Test rice type & quality with local images</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.actionCard}
+            onPress={() => router.push('/germination-detection-test')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.actionCardContent}>
+              <View style={styles.actionCardIcon}>
+                <MaterialCommunityIcons name="seed" size={24} color={Colors.primary} />
+              </View>
+              <View style={styles.actionCardText}>
+                <Text style={styles.actionCardTitle}>Germination Detection</Text>
+                <Text style={styles.actionCardDesc}>Test YOLO germination model with local images</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+          </TouchableOpacity>
+        </View>
+
         <Text style={styles.sectionTitle}>Current Plants</Text>
 
         {/* Plant Cards - Displayed directly from mock data */}
@@ -185,6 +223,53 @@ const styles = StyleSheet.create({
     borderColor: '#333',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  quickActionsSection: {
+    marginHorizontal: 20,
+    marginBottom: 30,
+  },
+  actionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  actionCardContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionCardIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    backgroundColor: '#F0FDF4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  actionCardText: {
+    flex: 1,
+  },
+  actionCardTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 2,
+  },
+  actionCardDesc: {
+    fontSize: 12,
+    color: '#6B7280',
   },
   sectionTitle: {
     fontSize: 16,
