@@ -11,11 +11,18 @@ from app.api import sensors
 from app.api import actuators
 import threading
 import numpy as np
-import tensorflow as tf
+# Optional TensorFlow support (for rice model)
+try:
+    import tensorflow as tf
+    import keras
+    TF_AVAILABLE = True
+except ImportError:
+    TF_AVAILABLE = False
+    tf = None
+    keras = None
 import io
 import os
 import uuid
-import keras
 from app.services.discovery import run_discovery_service
 from app.services import image_service
 from ultralytics import YOLO
@@ -210,12 +217,21 @@ image_class_type_dirs = [
     # ⚠️ add ALL rice types in the SAME order as training
 ]
 
-image_class_quality_dirs = ["Bad", "Good"]    
-model = tf.keras.models.load_model("D:/LEC/Research/Backend New/backend/backend/app/best_rice_model_convNext_V3.keras")
-print("✅ Rice model loaded")
+image_class_quality_dirs = ["Bad", "Good"]
+
+# ============ Load TensorFlow Rice Model (Optional) ============
+model = None
+if TF_AVAILABLE:
+    try:
+        model = tf.keras.models.load_model("D:/LEC/Research/Backend New/backend/backend/app/best_rice_model_convNext_V3.keras")
+        print("✅ Rice model loaded")
+    except Exception as e:
+        print(f"⚠️ Rice model loading failed: {e}")
+else:
+    print("⚠️ TensorFlow not available - Rice model disabled")
 
 # ============ Load YOLO Model for Germination Stage Detection ============
-yolo_model_path = os.path.join(os.path.dirname(__file__), "models", "germination-stage.pt")
+yolo_model_path = os.path.join(os.path.dirname(__file__), "models", "my_model.pt")
 if os.path.exists(yolo_model_path):
     yolo_model = YOLO(yolo_model_path, task='detect')
     print("✅ YOLO Germination model loaded")
@@ -223,6 +239,11 @@ else:
     yolo_model = None
     print("⚠️ YOLO model not found at:", yolo_model_path)
 def preprocess_image(image_bytes):
+    if not TF_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="TensorFlow not available - rice model disabled"
+        )
     # image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     # image = image.resize(IMAGE_SIZE)
     # image = np.array(image).astype(np.float32)
@@ -242,6 +263,11 @@ def preprocess_image(image_bytes):
 
 @app.post("/api/predict-rice")
 async def predict_rice(file: UploadFile = File(...)):
+    if not TF_AVAILABLE or model is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Rice model not available - TensorFlow not installed or model not found"
+        )
     image_bytes = await file.read()
     image_id = str(uuid.uuid4())
     # ------------------
