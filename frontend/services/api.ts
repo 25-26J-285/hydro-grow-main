@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Create axios instance with FastAPI backend URL
-const API_BASE_URL = 'http://localhost:8000';
+export const API_BASE_URL = 'http://10.170.197.117:8000';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -27,6 +27,22 @@ export const authAPI = {
     api.post('/api/login', { email, password }),
   getProfile: () => api.get('/api/me'),
   getItems: () => api.get('/api/items'),
+};
+
+export const sensorAPI = {
+  getAll: () => api.get('/api/sensors/all'),
+  getEnergy: () => api.get('/api/sensor/energy'),
+  getDeviceStatus: () => api.get('/api/devices/status'),
+};
+
+export const actuatorAPI = {
+  controlPump: (action: 'ON' | 'OFF') =>
+    api.post(`/api/actuator/pump?action=${action}`),
+  controlFan: (action: 'ON' | 'OFF') =>
+    api.post(`/api/actuator/fan?action=${action}`),
+  controlLED: (action: 'ON' | 'OFF' | 'SET_BRIGHTNESS', brightness?: number) =>
+    api.post(`/api/actuator/led_strip?action=${action}${brightness !== undefined ? `&brightness=${brightness}` : ''}`),
+  getStatus: () => api.get('/api/actuators/status'),
 };
 
 export default api;

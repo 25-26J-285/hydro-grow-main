@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,8 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  Dimensions
+  Dimensions,
+  Image,
 } from 'react-native';
+import { API_BASE_URL } from '../services/api';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -16,6 +18,16 @@ import { TraySlotCard } from '../components/TraySlotCard';
 // molinda actuators control
 export default function ActuatorsControl() {
   const router = useRouter();
+  const [snapshotUri, setSnapshotUri] = useState<string | null>(null);
+
+  useEffect(() => {
+    const refresh = () => {
+      setSnapshotUri(`${API_BASE_URL}/api/snapshot?t=${Date.now()}`);
+    };
+    refresh();
+    const interval = setInterval(refresh, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleBack = () => {
     router.back();
@@ -94,11 +106,18 @@ export default function ActuatorsControl() {
           </TouchableOpacity>
 
           <View style={styles.cameraContent}>
-            <TouchableOpacity style={styles.expandIcon}>
-              <MaterialCommunityIcons name="arrow-expand-all" size={20} color="#333" />
-            </TouchableOpacity>
-            <Text style={styles.cameraText}>Live Plant View</Text>
-            <Ionicons name="camera" size={24} color="#666" style={{ marginTop: 8 }} />
+            {snapshotUri ? (
+              <Image
+                source={{ uri: snapshotUri }}
+                style={{ width: '100%', height: '100%', borderRadius: 20 }}
+                resizeMode="cover"
+              />
+            ) : (
+              <>
+                <Text style={styles.cameraText}>Live Plant View</Text>
+                <Ionicons name="camera" size={24} color="#666" style={{ marginTop: 8 }} />
+              </>
+            )}
           </View>
 
           <TouchableOpacity style={styles.arrowRight}>

@@ -1,19 +1,65 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, StyleSheet, Text, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
+import { actuatorAPI } from '../services/api';
 
 export default function Controls() {
   const [activeTab, setActiveTab] = useState('climate');
-  const [waterPumpOn, setWaterPumpOn] = useState(true);
-  const [lightsOn, setLightsOn] = useState(true);
-  const [fanOn, setFanOn] = useState(true);
+  const [waterPumpOn, setWaterPumpOn] = useState(false);
+  const [lightsOn, setLightsOn] = useState(false);
+  const [fanOn, setFanOn] = useState(false);
   const [selectedPh, setSelectedPh] = useState('6.2');
+  const [feedback, setFeedback] = useState<string | null>(null);
 
   const phTargets = ['5.5', '6.0', '6.2', '6.5'];
 
   //molinda controls screen
+
+  useEffect(() => {
+    actuatorAPI.getStatus().then((res) => {
+      const data = res.data;
+      setWaterPumpOn(data.pump === 'ON');
+      setLightsOn(data.led_strip === 'ON');
+      setFanOn(data.fan === 'ON');
+    }).catch(() => {});
+  }, []);
+
+  const showFeedback = (msg: string) => {
+    setFeedback(msg);
+    setTimeout(() => setFeedback(null), 2500);
+  };
+
+  const handlePumpToggle = async (value: boolean) => {
+    setWaterPumpOn(value);
+    try {
+      const res = await actuatorAPI.controlPump(value ? 'ON' : 'OFF');
+      showFeedback(res.data.success ? `Pump ${value ? 'ON' : 'OFF'}` : 'Device not connected');
+    } catch {
+      showFeedback('Server unreachable');
+    }
+  };
+
+  const handleLightsToggle = async (value: boolean) => {
+    setLightsOn(value);
+    try {
+      const res = await actuatorAPI.controlLED(value ? 'ON' : 'OFF');
+      showFeedback(res.data.success ? `Lights ${value ? 'ON' : 'OFF'}` : 'Device not connected');
+    } catch {
+      showFeedback('Server unreachable');
+    }
+  };
+
+  const handleFanToggle = async (value: boolean) => {
+    setFanOn(value);
+    try {
+      const res = await actuatorAPI.controlFan(value ? 'ON' : 'OFF');
+      showFeedback(res.data.success ? `Fan ${value ? 'ON' : 'OFF'}` : 'Device not connected');
+    } catch {
+      showFeedback('Server unreachable');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -21,6 +67,12 @@ export default function Controls() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Controls</Text>
       </View>
+
+      {feedback && (
+        <View style={styles.feedbackBanner}>
+          <Text style={styles.feedbackText}>{feedback}</Text>
+        </View>
+      )}
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Tabs */}
@@ -67,7 +119,7 @@ export default function Controls() {
             <Text style={styles.controlLabel}>Water Pump</Text>
             <Switch
               value={waterPumpOn}
-              onValueChange={setWaterPumpOn}
+              onValueChange={handlePumpToggle}
               trackColor={{ false: '#e0e0e0', true: '#81c784' }}
               thumbColor={waterPumpOn ? Colors.primary : '#f4f3f4'}
             />
@@ -78,7 +130,7 @@ export default function Controls() {
             <Text style={styles.controlLabel}>Lights</Text>
             <Switch
               value={lightsOn}
-              onValueChange={setLightsOn}
+              onValueChange={handleLightsToggle}
               trackColor={{ false: '#e0e0e0', true: '#81c784' }}
               thumbColor={lightsOn ? Colors.primary : '#f4f3f4'}
             />
@@ -89,7 +141,7 @@ export default function Controls() {
             <Text style={styles.controlLabel}>Fan</Text>
             <Switch
               value={fanOn}
-              onValueChange={setFanOn}
+              onValueChange={handleFanToggle}
               trackColor={{ false: '#e0e0e0', true: '#81c784' }}
               thumbColor={fanOn ? Colors.primary : '#f4f3f4'}
             />
@@ -147,6 +199,17 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: '#333',
+  },
+  feedbackBanner: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  feedbackText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
   },
   scrollContent: {
     paddingBottom: 20,
