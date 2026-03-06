@@ -234,7 +234,7 @@ const response = await fetch(`${normalizedUrl}/api/predict-rice`, {
           <View style={styles.heroTextWrap}>
             <Text style={styles.heroTitle}>Capture, scan and review instantly</Text>
             <Text style={styles.heroSubtitle}>
-              Use the camera or gallery, send the image to your backend, and review the rice type and quality prediction in one screen.
+              Use the camera or gallery, send the image to your Galary, and review the rice type and quality prediction in one screen.
             </Text>
           </View>
         </View>
