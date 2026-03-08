@@ -21,3 +21,4 @@ wheels/
 *.egg
 .env
 .env.local
+models/best_rice_model_convNext_V3.keras
