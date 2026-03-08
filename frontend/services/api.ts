@@ -1,7 +1,10 @@
 import axios from 'axios';
 
 // Create axios instance with FastAPI backend URL
-export const API_BASE_URL = 'http://192.168.8.138:8000';
+// localhost when testing from browser on same machine
+// Use your LAN IP (e.g. http://192.168.x.x:8000) for real phone on WiFi
+// Use http://10.0.2.2:8000 for Android emulator
+export const API_BASE_URL = 'http://127.0.0.1:8000';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
