@@ -15,11 +15,28 @@ import io
 import os
 import uuid
 from app.services.discovery import run_discovery_service
+from ultralytics import YOLO
+
+# Load YOLOv11 model for disease detection
+YOLO_MODEL_PATH = "C:/Final/hydro-grow-main/backend/app/best.pt"
+_yolo_model = YOLO(YOLO_MODEL_PATH) if os.path.exists(YOLO_MODEL_PATH) else None
+if _yolo_model:
+    print("YOLO model loaded for disease detection")
+else:
+    print("YOLO model not found - /api/detect-disease will be unavailable")
+
+# Load YOLO model for germination stage detection
+GERMINATION_MODEL_PATH = "C:/Final/hydro-grow-main/backend/app/germination.pt"
+_germination_model = YOLO(GERMINATION_MODEL_PATH) if os.path.exists(GERMINATION_MODEL_PATH) else None
+if _germination_model:
+    print("Germination model loaded")
+else:
+    print("Germination model not found - /api/detect-germination will be unavailable")
 
 try:
     import tensorflow as tf
     import keras
-    MODEL_PATH = "D:/LEC/Research/Backend New/backend/backend/app/best_rice_model_convNext_V3.keras"
+    MODEL_PATH = "C:/Final/hydro-grow-main/backend/app/best_rice_model_convNext_V3.keras"
     _rice_model = tf.keras.models.load_model(MODEL_PATH) if os.path.exists(MODEL_PATH) else None
     if _rice_model:
         print("Rice model loaded")
@@ -236,8 +253,15 @@ async def predict_rice(file: UploadFile = File(...)):
     model_input = _tf.expand_dims(model_input, axis=0)
 
     predictions = _rice_model.predict(model_input, verbose=0)
-    type_probs = predictions["type"][0]
-    quality_probs = predictions["quality"][0]
+    # Handle both dict and list/tuple outputs
+    if isinstance(predictions, dict):
+        type_probs = predictions["type"][0]
+        quality_probs = predictions["quality"][0]
+    else:
+        # Model returns list of outputs [type_output, quality_output]
+        type_probs = predictions[0][0]
+        quality_probs = predictions[1][0]
+    
     type_idx = np.argmax(type_probs)
     quality_idx = np.argmax(quality_probs)
 
@@ -256,6 +280,71 @@ async def predict_rice(file: UploadFile = File(...)):
         }
     }
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
+from fastapi.responses import JSONResponse
+
+# Disease detection endpoint
+@app.post("/api/detect-disease")
+async def detect_disease(file: UploadFile = File(...)):
+    if _yolo_model is None:
+        raise HTTPException(status_code=503, detail="Disease detection model not available on this server")
+
+    image_bytes = await file.read()
+    image_id = str(uuid.uuid4())
+    original_path = f"{IMAGES_DIR}/{image_id}_disease.jpg"
+    with open(original_path, "wb") as f:
+        f.write(image_bytes)
+
+    # Run YOLO inference
+    try:
+        results = _yolo_model(original_path)
+        detections = []
+        for r in results:
+            for box in r.boxes:
+                cls = int(box.cls[0]) if hasattr(box, 'cls') else None
+                label = r.names[cls] if cls is not None and hasattr(r, 'names') else str(cls)
+                conf = float(box.conf[0]) if hasattr(box, 'conf') else None
+                xyxy = box.xyxy[0].tolist() if hasattr(box, 'xyxy') else None
+                detections.append({
+                    "label": label,
+                    "confidence": conf,
+                    "bbox": xyxy
+                })
+        return JSONResponse(content={
+            "detections": detections,
+            "image_id": image_id
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"YOLO inference error: {str(e)}")
+
+# Germination stage detection endpoint
+@app.post("/api/detect-germination")
+async def detect_germination(file: UploadFile = File(...)):
+    if _germination_model is None:
+        raise HTTPException(status_code=503, detail="Germination detection model not available on this server")
+
+    image_bytes = await file.read()
+    image_id = str(uuid.uuid4())
+    original_path = f"{IMAGES_DIR}/{image_id}_germination.jpg"
+    with open(original_path, "wb") as f:
+        f.write(image_bytes)
+
+    try:
+        results = _germination_model(original_path)
+        detections = []
+        for r in results:
+            for box in r.boxes:
+                cls = int(box.cls[0]) if hasattr(box, 'cls') else None
+                label = r.names[cls] if cls is not None and hasattr(r, 'names') else str(cls)
+                conf = float(box.conf[0]) if hasattr(box, 'conf') else None
+                xyxy = box.xyxy[0].tolist() if hasattr(box, 'xyxy') else None
+                detections.append({
+                    "label": label,
+                    "confidence": conf,
+                    "bbox": xyxy
+                })
+        return JSONResponse(content={
+            "detections": detections,
+            "image_id": image_id
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Germination inference error: {str(e)}")

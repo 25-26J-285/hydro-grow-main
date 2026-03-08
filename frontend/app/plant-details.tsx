@@ -510,13 +510,80 @@
 
 
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import Colors from '../constants/Colors';
 import styles from '../styles/PlantDetails.styles';
+
+const localStyles = StyleSheet.create({
+  germinationBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0fdf4',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    gap: 12,
+  },
+  germinationIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  germinationTextWrap: {
+    flex: 1,
+  },
+  germinationTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#14532d',
+  },
+  germinationSubtitle: {
+    fontSize: 12,
+    color: '#166534',
+    marginTop: 2,
+  },
+  scanBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff1f2',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    gap: 12,
+  },
+  scanIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scanTextWrap: {
+    flex: 1,
+  },
+  scanTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#7f1d1d',
+  },
+  scanSubtitle: {
+    fontSize: 12,
+    color: '#991b1b',
+    marginTop: 2,
+  },
+});
 
 export default function PlantDetails() {
   const router = useRouter();
@@ -611,15 +678,49 @@ export default function PlantDetails() {
         </View>
 
         {activeTab === 'plant' ? (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Plant Camera</Text>
-            <View style={styles.cameraPlaceholder}>
-              <Text style={styles.liveViewText}>Live Plant View</Text>
+          <>
+            {/* Germination Detection Banner */}
+            <TouchableOpacity
+              style={localStyles.germinationBanner}
+              onPress={() => router.push('/germination-detection')}
+              activeOpacity={0.85}
+            >
+              <View style={localStyles.germinationIconWrap}>
+                <MaterialCommunityIcons name="seed-outline" size={28} color="#16a34a" />
+              </View>
+              <View style={localStyles.germinationTextWrap}>
+                <Text style={localStyles.germinationTitle}>Detect Germination Stage</Text>
+                <Text style={localStyles.germinationSubtitle}>Upload or capture a photo — AI identifies growth stage</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#16a34a" />
+            </TouchableOpacity>
+
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Plant Camera</Text>
+              <View style={styles.cameraPlaceholder}>
+                <Text style={styles.liveViewText}>Live Plant View</Text>
+              </View>
+              <Text style={styles.lastUpdated}>Last updated: 2 min ago</Text>
             </View>
-            <Text style={styles.lastUpdated}>Last updated: 2 min ago</Text>
-          </View>
+          </>
         ) : (
           <>
+            {/* Disease Detection Banner */}
+            <TouchableOpacity
+              style={localStyles.scanBanner}
+              onPress={() => router.push('/disease-detection')}
+              activeOpacity={0.85}
+            >
+              <View style={localStyles.scanIconWrap}>
+                <MaterialCommunityIcons name="shield-bug" size={28} color="#dc2626" />
+              </View>
+              <View style={localStyles.scanTextWrap}>
+                <Text style={localStyles.scanTitle}>Scan Plant for Diseases</Text>
+                <Text style={localStyles.scanSubtitle}>Upload or capture a photo — AI detects diseases instantly</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#dc2626" />
+            </TouchableOpacity>
+
             <DiseaseItem
               title="Narrow Brown Spots"
               subtitle="Day 15 of growth"

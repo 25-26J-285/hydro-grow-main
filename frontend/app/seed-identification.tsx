@@ -17,8 +17,9 @@ import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import Colors from '../constants/Colors';
+import { API_BASE_URL } from '../services/api';
 
-const DEFAULT_BACKEND_URL = 'http://localhost:8000';
+const DEFAULT_BACKEND_URL = API_BASE_URL || 'http://localhost:8000';
 
 type PickerImage = {
   uri: string;
