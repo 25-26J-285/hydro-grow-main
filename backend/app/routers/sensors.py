@@ -1,71 +1,144 @@
 from fastapi import APIRouter
 from app.services.state_store import global_state
+from app.routers.esp32_gateway import manager
+from app.services import control_service
 
 router = APIRouter()
 
 
-@router.get("/api/sensor/temp")
-async def get_temperature():
-    return {"value": global_state["sensors"]["temp"], "unit": "°C", "sensor": "DHT22", "device": "mobile"}
+@router.post("/api/actuator/pump")
+async def control_pump(action: str):
+    """Control water pump (ON/OFF)"""
+    if action not in ["ON", "OFF"]:
+        return {"success": False, "error": "Invalid action. Use ON or OFF"}
 
+    command = {"target": "stationary", "component": "pump", "action": action}
+    await control_service.process_command(command)
+    sent = await manager.send_command("stationary", command)
 
-@router.get("/api/sensor/humidity")
-async def get_humidity():
-    return {"value": global_state["sensors"]["hum"], "unit": "%", "sensor": "DHT22", "device": "mobile"}
-
-
-@router.get("/api/sensor/air")
-async def get_air_quality():
-    return {"value": global_state["sensors"]["air_quality"], "unit": "%", "sensor": "MQ-135", "device": "mobile"}
-
-
-@router.get("/api/sensor/light")
-async def get_light():
-    return {"value": global_state["sensors"]["light"], "unit": "%", "sensor": "LDR", "device": "mobile"}
-
-
-@router.get("/api/sensor/dist")
-async def get_distance():
-    return {"value": global_state["sensors"]["dist"], "unit": "cm", "sensor": "HC-SR04", "device": "mobile"}
-
-
-@router.get("/api/sensor/ph")
-async def get_ph():
-    return {"value": global_state["sensors"]["ph"], "unit": "pH", "sensor": "Analog pH", "device": "stationary"}
-
-
-@router.get("/api/sensor/energy")
-async def get_energy():
     return {
-        "status": global_state["sensors"]["energy_status"],
-        "voltage": global_state["sensors"]["energy_voltage"],
-        "current": global_state["sensors"]["energy_current"],
-        "power": global_state["sensors"]["energy_power"],
-        "total_energy": global_state["sensors"]["energy_total"],
-        "unit": {"voltage": "V", "current": "A", "power": "W", "energy": "kWh"},
-        "sensor": "PZEM-004T",
-        "device": "stationary",
+        "success": sent,
+        "component": "pump",
+        "action": action,
+        "message": "Command sent" if sent else "Device not connected",
     }
 
 
-@router.get("/api/sensors/all")
-async def get_all_sensors():
+@router.post("/api/actuator/fan")
+async def control_fan(action: str):
+    """Control fan (ON/OFF)"""
+    if action not in ["ON", "OFF"]:
+        return {"success": False, "error": "Invalid action. Use ON or OFF"}
+
+    command = {"target": "stationary", "component": "fan", "action": action}
+    await control_service.process_command(command)
+    sent = await manager.send_command("stationary", command)
+
     return {
-        "mobile": {
-            "temp": global_state["sensors"]["temp"],
-            "humidity": global_state["sensors"]["hum"],
-            "air_quality": global_state["sensors"]["air_quality"],
-            "light": global_state["sensors"]["light"],
-            "distance": global_state["sensors"]["dist"],
-        },
-        "stationary": {
-            "ph": global_state["sensors"]["ph"],
-            "energy": {
-                "status": global_state["sensors"]["energy_status"],
-                "voltage": global_state["sensors"]["energy_voltage"],
-                "current": global_state["sensors"]["energy_current"],
-                "power": global_state["sensors"]["energy_power"],
-                "total": global_state["sensors"]["energy_total"],
-            },
-        },
+        "success": sent,
+        "component": "fan",
+        "action": action,
+        "message": "Command sent" if sent else "Device not connected",
     }
+
+
+@router.post("/api/actuator/led_strip")
+async def control_led_strip(action: str, brightness: int = 255):
+    """Control LED strip (ON/OFF/SET_BRIGHTNESS)"""
+    if action not in ["ON", "OFF", "SET_BRIGHTNESS"]:
+        return {"success": False, "error": "Invalid action. Use ON, OFF, or SET_BRIGHTNESS"}
+
+    command = {
+        "target": "stationary",
+        "component": "led_strip",
+        "action": action,
+        "value": brightness if action == "SET_BRIGHTNESS" else 0,
+    }
+    await control_service.process_command(command)
+    sent = await manager.send_command("stationary", command)
+
+    return {
+        "success": sent,
+        "component": "led_strip",
+        "action": action,
+        "brightness": brightness if action == "SET_BRIGHTNESS" else global_state["actuators"]["brightness"],
+        "message": "Command sent" if sent else "Device not connected",
+    }
+
+
+@router.post("/api/actuator/rail")
+async def control_rail(action: str):
+    """Control mobile rail (MOVE_LEFT/MOVE_RIGHT/STOP)"""
+    if action not in ["MOVE_LEFT", "MOVE_RIGHT", "STOP"]:
+        return {"success": False, "error": "Invalid action. Use MOVE_LEFT, MOVE_RIGHT, or STOP"}
+
+    # Rail is on the MOBILE device, not stationary
+    command = {"target": "mobile", "component": "rail", "action": action}
+    await control_service.process_command(command)
+    sent = await manager.send_command("mobile", command)
+
+    return {
+        "success": sent,
+        "component": "rail",
+        "action": action,
+        "message": "Command sent" if sent else "Device not connected",
+    }
+
+
+@router.post("/api/actuator/flash")
+async def control_flash(action: str, brightness: int = 255):
+    """Control ESP32-CAM flash (ON/OFF/SET_BRIGHTNESS)"""
+    if action not in ["ON", "OFF", "SET_BRIGHTNESS"]:
+        return {"success": False, "error": "Invalid action. Use ON, OFF, or SET_BRIGHTNESS"}
+
+    command = {
+        "target":    "camera",
+        "component": "flash",
+        "action":    action,
+        "value":     brightness if action == "SET_BRIGHTNESS" else 0,
+    }
+    await control_service.process_command(command)
+    sent = await manager.send_command("camera", command)
+
+    return {
+        "success":   sent,
+        "component": "flash",
+        "action":    action,
+        "message":   "Command sent" if sent else "Camera not connected",
+    }
+
+
+@router.post("/api/priority")
+async def set_priority(mode: str):
+    """Set mobile device priority mode (camera | sensors | balanced).
+    Sends SLEEP/WAKE commands to the mobile ESP32-CAM to manage shared 5V power."""
+    if mode not in ["camera", "sensors", "balanced"]:
+        return {"success": False, "error": "Invalid mode. Use camera, sensors, or balanced"}
+
+    if mode == "camera":
+        cam_cmd    = {"target": "mobile", "component": "camera", "action": "WAKE"}
+        sensor_cmd = {"target": "mobile", "component": "mobile", "action": "SLEEP"}
+    elif mode == "sensors":
+        cam_cmd    = {"target": "mobile", "component": "camera", "action": "SLEEP"}
+        sensor_cmd = {"target": "mobile", "component": "mobile", "action": "WAKE"}
+    else:  # balanced
+        cam_cmd    = {"target": "mobile", "component": "camera", "action": "WAKE"}
+        sensor_cmd = {"target": "mobile", "component": "mobile", "action": "WAKE"}
+
+    cam_sent    = await manager.send_command("mobile", cam_cmd)
+    sensor_sent = await manager.send_command("mobile", sensor_cmd)
+    sent = cam_sent and sensor_sent
+
+    global_state["priority"] = mode
+
+    return {
+        "success": sent,
+        "mode": mode,
+        "message": f"Priority set to {mode}" if sent else "Mobile device not connected",
+    }
+
+
+@router.get("/api/actuators/status")
+async def get_actuators_status():
+    """Get current status of all actuators"""
+    return global_state["actuators"]
