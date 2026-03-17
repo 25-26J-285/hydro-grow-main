@@ -24,11 +24,14 @@ global_state = {
         "pump": "OFF",
         "fan": "OFF",
         "led_strip": "OFF",
-        "brightness": 0,   # 0-255
+        "brightness": 0,          # 0-255
         "rail": "STOP",
+        "flash": "OFF",           # Camera ESP32-CAM flash
+        "flash_brightness": 0,    # 0-255
     },
     "devices": {
         "stationary": {"connected": False, "last_seen": None},
-        "mobile": {"connected": False, "last_seen": None},
+        "mobile":     {"connected": False, "last_seen": None},
+        "camera":     {"connected": False, "last_seen": None},
     },
 }
