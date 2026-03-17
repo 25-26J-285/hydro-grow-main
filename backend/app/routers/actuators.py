@@ -85,6 +85,29 @@ async def control_rail(action: str):
     }
 
 
+@router.post("/api/actuator/flash")
+async def control_flash(action: str, brightness: int = 255):
+    """Control ESP32-CAM flash LED (ON/OFF/SET_BRIGHTNESS)"""
+    if action not in ["ON", "OFF", "SET_BRIGHTNESS"]:
+        return {"success": False, "error": "Invalid action. Use ON, OFF, or SET_BRIGHTNESS"}
+
+    command = {
+        "target":    "camera",
+        "component": "flash",
+        "action":    action,
+        "value":     brightness if action == "SET_BRIGHTNESS" else 0,
+    }
+    await control_service.process_command(command)
+    sent = await manager.send_command("camera", command)
+
+    return {
+        "success":   sent,
+        "component": "flash",
+        "action":    action,
+        "message":   "Command sent" if sent else "Camera not connected",
+    }
+
+
 @router.get("/api/actuators/status")
 async def get_actuators_status():
     """Get current status of all actuators"""
