@@ -55,6 +55,14 @@ async def process_stationary_data(raw_data: dict):
         global_state["sensors"]["energy_power"] = data.energy_power
     if data.energy_total is not None:
         global_state["sensors"]["energy_total"] = data.energy_total
+    if data.temp is not None:
+        global_state["sensors"]["temp"] = data.temp
+    if data.hum is not None:
+        global_state["sensors"]["hum"] = data.hum
+    if data.light is not None:
+        global_state["sensors"]["light"] = data.light
+    if data.air_quality is not None:
+        global_state["sensors"]["air_quality"] = data.air_quality
 
     global_state["devices"]["stationary"]["connected"] = True
     global_state["devices"]["stationary"]["last_seen"] = datetime.now().isoformat()
@@ -63,5 +71,9 @@ async def process_stationary_data(raw_data: dict):
         print(f"[WARN]  pH out of range: {data.ph}")
     if data.energy_status == "ERROR":
         print("[WARN]  Energy monitor disconnected!")
+    if data.temp is not None and data.temp > 35.0:
+        print(f"[WARN]  Temperature too high: {data.temp}C")
+    if data.air_quality is not None and data.air_quality > 70:
+        print(f"[WARN]  Poor air quality: {data.air_quality}%")
 
-    print(f"[Stationary] pH:{data.ph} Power:{data.energy_power}W Status:{data.energy_status}")
+    print(f"[Stationary] pH:{data.ph} T:{data.temp}C H:{data.hum}% L:{data.light}% AQ:{data.air_quality}% Power:{data.energy_power}W")
