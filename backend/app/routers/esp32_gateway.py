@@ -1,5 +1,8 @@
+import asyncio
+import json
+from datetime import datetime
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from app.services import sensor_service, control_service
+from app.services import sensor_service, control_service, image_service
 
 router = APIRouter()
 
@@ -7,16 +10,35 @@ router = APIRouter()
 class ConnectionManager:
     def __init__(self):
         self.active_connections: dict = {
-            "mobile": None,
+            "mobile":     None,
             "stationary": None,
+            "camera":     None,
+        }
+        # Per-device send lock — prevents concurrent sends corrupting the WS stream
+        self._send_locks: dict = {
+            "mobile":     asyncio.Lock(),
+            "stationary": asyncio.Lock(),
+            "camera":     asyncio.Lock(),
         }
 
     async def connect(self, device_type: str, websocket: WebSocket):
         await websocket.accept()
         self.active_connections[device_type] = websocket
         from app.services.state_store import global_state
+        # Camera only needs flash state; other devices get full actuator state
+        if device_type == "camera":
+            sync_payload = {
+                "type": "state_sync",
+                "actuators": {
+                    "flash":            global_state["actuators"]["flash"],
+                    "flash_brightness": global_state["actuators"]["flash_brightness"],
+                },
+            }
+        else:
+            sync_payload = {"type": "state_sync", "actuators": global_state["actuators"]}
         try:
-            await websocket.send_json({"type": "state_sync", "actuators": global_state["actuators"]})
+            async with self._send_locks[device_type]:
+                await websocket.send_json(sync_payload)
         except Exception as e:
             print(f"[WS] {device_type} state sync failed: {e}")
         print(f"[WS] {device_type} connected — actuator state synced")
@@ -30,7 +52,8 @@ class ConnectionManager:
         if ws is None:
             return False
         try:
-            await ws.send_json(data)
+            async with self._send_locks[target]:
+                await ws.send_json(data)
             return True
         except Exception as e:
             print(f"[WS] send_command error ({target}): {e}")
@@ -50,6 +73,8 @@ async def ws_stationary(websocket: WebSocket):
         while True:
             try:
                 data = await websocket.receive_json()
+            except WebSocketDisconnect:
+                raise
             except Exception:
                 print("[WS] Stationary: malformed message, skipping")
                 continue
@@ -67,6 +92,8 @@ async def ws_mobile(websocket: WebSocket):
         while True:
             try:
                 data = await websocket.receive_json()
+            except WebSocketDisconnect:
+                raise
             except Exception:
                 print("[WS] Mobile: malformed message, skipping")
                 continue
@@ -75,7 +102,38 @@ async def ws_mobile(websocket: WebSocket):
         manager.disconnect("mobile")
 
 
-# ── 3. Control commands ───────────────────────────────────────────────────────
+# ── 3. Camera gateway (binary RGB565 frames + JSON heartbeat) ────────────────
+@router.websocket("/ws/camera")
+async def ws_camera(websocket: WebSocket):
+    """WebSocket for ESP32-CAM (binary RGB565 frames + JSON heartbeat/sensors)"""
+    from app.services.state_store import global_state
+    await manager.connect("camera", websocket)
+    try:
+        while True:
+            try:
+                message = await websocket.receive()
+                if "bytes" in message and message["bytes"]:
+                    # Raw RGB565 numerical pixel data — converted to JPEG by image_service
+                    await image_service.process_frame(message["bytes"], format_type="rgb565")
+                elif "text" in message and message["text"]:
+                    # JSON heartbeat: {"status":"OK","heap":...,"temp":...,"hum":...}
+                    data = json.loads(message["text"])
+                    global_state["devices"]["camera"]["connected"] = True
+                    global_state["devices"]["camera"]["last_seen"] = datetime.now().isoformat()
+                    # Store temp/hum from DHT22 on camera ESP32 into sensor state
+                    if "temp" in data and data["temp"] is not None:
+                        global_state["sensors"]["temp"] = data["temp"]
+                    if "hum" in data and data["hum"] is not None:
+                        global_state["sensors"]["hum"] = data["hum"]
+                    print(f"[Camera] Heartbeat — heap:{data.get('heap')} temp:{data.get('temp')} hum:{data.get('hum')}")
+            except Exception:
+                continue
+    except WebSocketDisconnect:
+        global_state["devices"]["camera"]["connected"] = False
+        manager.disconnect("camera")
+
+
+# ── 4. Control commands ───────────────────────────────────────────────────────
 @router.post("/api/control")
 async def send_control_command(command: dict):
     """Send control command to ESP32 devices"""
@@ -103,6 +161,7 @@ async def get_system_state():
 async def get_devices_status():
     """Check which devices are connected"""
     return {
-        "mobile": manager.active_connections["mobile"] is not None,
+        "mobile":     manager.active_connections["mobile"]     is not None,
         "stationary": manager.active_connections["stationary"] is not None,
+        "camera":     manager.active_connections["camera"]     is not None,
     }
