@@ -28,5 +28,13 @@ class Settings:
     def RICE_MODEL_PATH(self) -> str:
         return os.path.join(self.MODELS_DIR, "best_rice_model_convNext_V3.keras")
 
+    @property
+    def ENERGY_MODEL_PATH(self) -> str:
+        return os.path.join(self.MODELS_DIR, "energy_lstm_model.keras")
+
+    @property
+    def ENERGY_SCALER_PATH(self) -> str:
+        return os.path.join(self.MODELS_DIR, "energy_scaler.pkl")
+
 
 settings = Settings()
