@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { sensorAPI } from '../../services/api';
+import { API_BASE_URL, sensorAPI } from '../../services/api';
 
 const ELECTRICITY_RATE_PER_KWH = 45; // Rs. per kWh
 
@@ -20,10 +20,32 @@ interface SensorData {
   energyStatus: string;
 }
 
+interface EnergyPrediction {
+  available: boolean;
+  predicted_energy_kwh?: number;
+  reason?: string;
+  samples_collected?: number;
+  samples_needed?: number;
+  samples_used?: number;
+}
+
 interface DeviceStatus {
   mobile: boolean;
   stationary: boolean;
 }
+
+const isConnected = (device: unknown) =>
+  typeof device === 'boolean'
+    ? device
+    : !!(device && typeof device === 'object' && 'connected' in device && (device as { connected?: boolean }).connected);
+
+const formatEnergyValue = (kwh: number) => {
+  if (kwh >= 1) {
+    return `${kwh.toFixed(5)} kWh`;
+  }
+
+  return `${(kwh * 1000).toFixed(4)} Wh`;
+};
 
 export default function Energy() {
   const router = useRouter();
@@ -39,6 +61,10 @@ export default function Energy() {
     energyStatus: 'UNKNOWN',
   });
   const [devices, setDevices] = useState<DeviceStatus>({ mobile: false, stationary: false });
+  const [prediction, setPrediction] = useState<EnergyPrediction>({
+    available: false,
+    reason: 'Collecting live sensor history...',
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,13 +92,19 @@ export default function Energy() {
       });
 
       setDevices({
-        mobile: deviceData.mobile?.connected ?? false,
-        stationary: deviceData.stationary?.connected ?? false,
+        mobile: isConnected(deviceData.mobile),
+        stationary: isConnected(deviceData.stationary),
       });
+      setPrediction(
+        energy.prediction ?? {
+          available: false,
+          reason: 'Prediction unavailable.',
+        }
+      );
 
       setError(null);
     } catch {
-      setError('Unable to reach server. Check network connection.');
+      setError(`Unable to reach server at ${API_BASE_URL}. Check that your phone and computer are on the same Wi-Fi.`);
     } finally {
       setLoading(false);
     }
@@ -93,10 +125,12 @@ export default function Energy() {
   };
 
   const cost = (sensors.totalEnergy * ELECTRICITY_RATE_PER_KWH).toFixed(2);
+  const predictionStatus = prediction.available
+    ? `24 samples used${prediction.samples_collected ? ` | ${prediction.samples_collected} collected` : ''}`
+    : prediction.reason ?? 'Prediction unavailable';
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>HydroGrow</Text>
         <TouchableOpacity onPress={handleNotificationPress}>
@@ -118,7 +152,6 @@ export default function Energy() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Device Status Row */}
           <View style={styles.deviceStatusRow}>
             <View style={styles.deviceBadge}>
               <View style={[styles.statusDot, { backgroundColor: devices.mobile ? '#22c55e' : '#ef4444' }]} />
@@ -130,27 +163,23 @@ export default function Energy() {
             </View>
           </View>
 
-          {/* System Overview Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Energy Prediction</Text>
             <Text style={styles.sectionSubtitle}>IOT-powered insights</Text>
 
             <View style={styles.cardsRow}>
-              {/* Temperature Card */}
               <View style={styles.card}>
                 <MaterialCommunityIcons name="thermometer" size={32} color={Colors.primary} />
                 <Text style={styles.cardTitle}>Temperature</Text>
-                <Text style={styles.cardValue}>{sensors.temp.toFixed(1)} °C</Text>
+                <Text style={styles.cardValue}>{sensors.temp.toFixed(1)} C</Text>
               </View>
 
-              {/* Humidity Card */}
               <View style={styles.card}>
                 <MaterialCommunityIcons name="water" size={32} color={Colors.primary} />
                 <Text style={styles.cardTitle}>Humidity</Text>
                 <Text style={styles.cardValue}>{sensors.humidity.toFixed(1)} %</Text>
               </View>
 
-              {/* pH Level Card */}
               <View style={styles.card}>
                 <MaterialCommunityIcons name="flask" size={32} color={Colors.primary} />
                 <Text style={styles.cardTitle}>pH Level</Text>
@@ -159,20 +188,19 @@ export default function Energy() {
             </View>
           </View>
 
-          {/* Energy Analytics Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Energy Analytics</Text>
 
             <View style={styles.analyticsRow}>
-              {/* Current Usage Card */}
               <View style={[styles.card, styles.analyticsCard]}>
                 <MaterialCommunityIcons name="lightning-bolt" size={28} color="#FFA500" />
                 <Text style={styles.analyticsCardTitle}>Current Usage</Text>
                 <Text style={styles.analyticsCardValue}>{sensors.power.toFixed(1)} W</Text>
-                <Text style={styles.cardSub}>{sensors.voltage.toFixed(1)} V · {sensors.current.toFixed(2)} A</Text>
+                <Text style={styles.cardSub}>
+                  {sensors.voltage.toFixed(1)} V | {sensors.current.toFixed(2)} A
+                </Text>
               </View>
 
-              {/* Today's Cost Card */}
               <View style={[styles.card, styles.analyticsCard]}>
                 <MaterialCommunityIcons name="cash" size={28} color={Colors.primary} />
                 <Text style={styles.analyticsCardTitle}>Today's Cost</Text>
@@ -182,7 +210,6 @@ export default function Energy() {
             </View>
           </View>
 
-          {/* Predicted Energy for Tomorrow Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Predicted Energy for Tomorrow</Text>
             <Text style={styles.sectionSubtitle}>ML Prediction</Text>
@@ -190,12 +217,13 @@ export default function Energy() {
             <View style={styles.card}>
               <MaterialCommunityIcons name="chart-line" size={32} color={Colors.primary} />
               <Text style={styles.cardTitle}>Estimated Usage</Text>
-              <Text style={styles.cardValue}>{sensors.totalEnergy.toFixed(3)} kWh</Text>
-              <Text style={styles.predictionConfidence}>Confidence: N/A · ML model pending</Text>
+              <Text style={styles.cardValue}>
+                {prediction.available ? formatEnergyValue(prediction.predicted_energy_kwh ?? 0) : '--'}
+              </Text>
+              <Text style={styles.predictionConfidence}>{predictionStatus}</Text>
             </View>
           </View>
 
-          {/* Controls Section */}
           <TouchableOpacity style={styles.section} onPress={handleControlsPress}>
             <Text style={styles.sectionTitle}>Controls</Text>
             <View style={styles.controlsCard}>
