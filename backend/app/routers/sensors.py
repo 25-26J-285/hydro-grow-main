@@ -2,8 +2,55 @@ from fastapi import APIRouter
 from app.services.state_store import global_state
 from app.routers.esp32_gateway import manager
 from app.services import control_service
+from app.services.energy_prediction_service import get_energy_prediction
 
 router = APIRouter()
+
+
+@router.get("/api/sensors/all")
+async def get_all_sensors():
+    """Return the latest combined mobile and stationary sensor snapshot."""
+    sensors = global_state["sensors"]
+    devices = global_state["devices"]
+
+    return {
+        "mobile": {
+            "connected": devices["mobile"]["connected"],
+            "last_seen": devices["mobile"]["last_seen"],
+            "temp": sensors["temp"],
+            "humidity": sensors["hum"],
+            "air_quality": sensors["air_quality"],
+            "light": sensors["light"],
+            "dist": sensors["dist"],
+        },
+        "stationary": {
+            "connected": devices["stationary"]["connected"],
+            "last_seen": devices["stationary"]["last_seen"],
+            "ph": sensors["ph"],
+            "energy_status": sensors["energy_status"],
+            "voltage": sensors["energy_voltage"],
+            "current": sensors["energy_current"],
+            "power": sensors["energy_power"],
+            "total_energy": sensors["energy_total"],
+        },
+    }
+
+
+@router.get("/api/sensor/energy")
+async def get_energy_snapshot():
+    """Return the latest energy-monitor readings."""
+    sensors = global_state["sensors"]
+    stationary_connected = global_state["devices"]["stationary"]["connected"]
+
+    return {
+        "connected": stationary_connected,
+        "status": sensors["energy_status"],
+        "voltage": sensors["energy_voltage"],
+        "current": sensors["energy_current"],
+        "power": sensors["energy_power"],
+        "total_energy": sensors["energy_total"],
+        "prediction": get_energy_prediction(),
+    }
 
 
 @router.post("/api/actuator/pump")
