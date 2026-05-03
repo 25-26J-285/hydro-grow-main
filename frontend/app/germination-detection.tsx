@@ -7,18 +7,19 @@ import {
   TouchableOpacity,
   StatusBar,
   Alert,
-  Image,
   ActivityIndicator,
-  TextInput,
   Platform,
   LayoutChangeEvent,
+  Image as RNImage,
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import Colors from '../constants/Colors';
 import { API_BASE_URL } from '../services/api';
+import { captureBackendSnapshot } from '../services/snapshotCapture';
 
 const DEFAULT_BACKEND_URL = API_BASE_URL || 'http://localhost:8000';
 
@@ -29,6 +30,7 @@ const STAGE_ORDER = ['seed', 'germination', 'sprout', 'seedling', 'vegetative', 
 
 type PickerImage = {
   uri: string;
+  previewUri: string;
   name: string;
   mimeType: string;
   originalWidth: number;
@@ -51,11 +53,12 @@ type ImageLayout = { width: number; height: number };
 
 export default function GerminationDetection() {
   const router = useRouter();
-  const [backendUrl, setBackendUrl] = useState(DEFAULT_BACKEND_URL);
   const [selectedImage, setSelectedImage] = useState<PickerImage | null>(null);
   const [result, setResult] = useState<DetectionResponse | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCapturingSnapshot, setIsCapturingSnapshot] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [previewLoadFailed, setPreviewLoadFailed] = useState(false);
   const [imageLayout, setImageLayout] = useState<ImageLayout | null>(null);
 
   const previewSubtitle = useMemo(() => {
@@ -72,12 +75,22 @@ export default function GerminationDetection() {
 
   const buildImagePayload = (asset: ImagePicker.ImagePickerAsset): PickerImage => ({
     uri: asset.uri,
+    previewUri: asset.base64 ? `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}` : asset.uri,
     name: asset.fileName || `germination-scan-${Date.now()}.jpg`,
     mimeType: asset.mimeType || 'image/jpeg',
     originalWidth: asset.width || 640,
     originalHeight: asset.height || 640,
     webFile: (asset as any).file ?? null,
   });
+
+  const getImageDimensions = (uri: string) =>
+    new Promise<{ width: number; height: number }>((resolve) => {
+      RNImage.getSize(
+        uri,
+        (width, height) => resolve({ width, height }),
+        () => resolve({ width: 640, height: 640 })
+      );
+    });
 
   const handleGalleryPick = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -89,8 +102,10 @@ export default function GerminationDetection() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       quality: 0.9,
+      base64: true,
     });
     if (res.canceled || !res.assets?.length) return;
+    setPreviewLoadFailed(false);
     setSelectedImage(buildImagePayload(res.assets[0]));
     setResult(null);
     setErrorMessage(null);
@@ -107,12 +122,37 @@ export default function GerminationDetection() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       quality: 0.9,
+      base64: true,
     });
     if (res.canceled || !res.assets?.length) return;
+    setPreviewLoadFailed(false);
     setSelectedImage(buildImagePayload(res.assets[0]));
     setResult(null);
     setErrorMessage(null);
     setImageLayout(null);
+  };
+
+  const handleCameraModeCapture = async () => {
+    setIsCapturingSnapshot(true);
+    setErrorMessage(null);
+
+    try {
+      const snapshot = await captureBackendSnapshot('germination-camera-mode');
+      const dimensions = await getImageDimensions(snapshot.uri);
+
+      setSelectedImage({
+        ...snapshot,
+        originalWidth: dimensions.width,
+        originalHeight: dimensions.height,
+      });
+      setPreviewLoadFailed(false);
+      setResult(null);
+      setImageLayout(null);
+    } catch {
+      setErrorMessage('Unable to fetch a live camera snapshot right now. Please check the camera connection and try again.');
+    } finally {
+      setIsCapturingSnapshot(false);
+    }
   };
 
   const handleAnalyze = async () => {
@@ -120,9 +160,9 @@ export default function GerminationDetection() {
       Alert.alert('Image required', 'Please select or capture a plant image first.');
       return;
     }
-    const normalizedUrl = sanitizeUrl(backendUrl);
+    const normalizedUrl = sanitizeUrl(DEFAULT_BACKEND_URL);
     if (!normalizedUrl) {
-      Alert.alert('Backend URL required', 'Please enter your backend server URL.');
+      Alert.alert('Server unavailable', 'The backend server is not configured.');
       return;
     }
 
@@ -160,9 +200,9 @@ export default function GerminationDetection() {
         throw new Error(payload?.detail || payload?.message || rawText || 'Detection failed.');
       }
       setResult(payload as DetectionResponse);
-    } catch (error: any) {
+    } catch {
       setResult(null);
-      setErrorMessage(error?.message || 'Unable to analyze the selected image.');
+      setErrorMessage('Unable to analyze the image right now. Please check the backend connection and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -172,6 +212,7 @@ export default function GerminationDetection() {
     setSelectedImage(null);
     setResult(null);
     setErrorMessage(null);
+    setPreviewLoadFailed(false);
     setImageLayout(null);
   };
 
@@ -247,23 +288,6 @@ export default function GerminationDetection() {
           </View>
         </View>
 
-        {/* Backend URL */}
-        <View style={styles.configCard}>
-          <Text style={styles.configLabel}>Backend URL</Text>
-          <TextInput
-            value={backendUrl}
-            onChangeText={setBackendUrl}
-            autoCapitalize="none"
-            autoCorrect={false}
-            placeholder="http://10.0.2.2:8000"
-            style={styles.urlInput}
-            placeholderTextColor="#94a3b8"
-          />
-          <Text style={styles.helperText}>
-            Emulator: 10.0.2.2 | Real phone: use your computer&apos;s local IP address.
-          </Text>
-        </View>
-
         {/* Action Buttons */}
         <View style={styles.actionRow}>
           <TouchableOpacity style={styles.actionCard} onPress={handleGalleryPick} activeOpacity={0.9}>
@@ -280,6 +304,23 @@ export default function GerminationDetection() {
             </View>
             <Text style={styles.actionTitle}>Camera</Text>
             <Text style={styles.actionCaption}>Capture a fresh image</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={handleCameraModeCapture}
+            activeOpacity={0.9}
+            disabled={isCapturingSnapshot}
+          >
+            <View style={styles.actionIconCircle}>
+              {isCapturingSnapshot ? (
+                <ActivityIndicator color={Colors.primary} />
+              ) : (
+                <Ionicons name="videocam-outline" size={26} color={Colors.primary} />
+              )}
+            </View>
+            <Text style={styles.actionTitle}>Camera Mode</Text>
+            <Text style={styles.actionCaption}>Use the live backend snapshot</Text>
           </TouchableOpacity>
         </View>
 
@@ -302,11 +343,22 @@ export default function GerminationDetection() {
 
           {selectedImage ? (
             <View style={styles.imageWrapper} onLayout={handleWrapperLayout}>
-              <Image
-                source={{ uri: selectedImage.uri }}
-                style={styles.previewImage}
-                resizeMode="stretch"
-              />
+              {!previewLoadFailed ? (
+                <ExpoImage
+                  key={selectedImage.previewUri}
+                  source={{ uri: selectedImage.previewUri }}
+                  style={styles.previewImage}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                  onError={() => setPreviewLoadFailed(true)}
+                />
+              ) : (
+                <View style={styles.previewFallback}>
+                  <MaterialCommunityIcons name="image-broken-variant" size={44} color="#94a3b8" />
+                  <Text style={styles.previewFallbackTitle}>Preview unavailable</Text>
+                  <Text style={styles.previewFallbackText}>The image was selected, but the phone could not render this file preview.</Text>
+                </View>
+              )}
               {result && imageLayout && result.detections.map((det, i) => {
                 if (!det.bbox) return null;
                 const scaled = scaleBbox(det.bbox);
@@ -534,29 +586,6 @@ const styles = StyleSheet.create({
   heroTextWrap: { flex: 1 },
   heroTitle: { fontSize: 17, fontWeight: '700', color: '#064e3b', marginBottom: 6 },
   heroSubtitle: { fontSize: 13, lineHeight: 20, color: '#065f46' },
-  configCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 18,
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 2,
-  },
-  configLabel: { fontSize: 13, fontWeight: '700', color: '#334155', marginBottom: 8 },
-  urlInput: {
-    borderWidth: 1,
-    borderColor: '#dbe4ee',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: '#0f172a',
-    backgroundColor: '#f8fafc',
-  },
-  helperText: { fontSize: 12, lineHeight: 18, color: '#64748b', marginTop: 8 },
   actionRow: { flexDirection: 'row', gap: 12, marginBottom: 18 },
   actionCard: {
     flex: 1,
@@ -619,11 +648,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#e2e8f0',
   },
   previewImage: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    width: '100%',
+    height: '100%',
+  },
+  previewFallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  previewFallbackTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#475569',
+    marginTop: 12,
+  },
+  previewFallbackText: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#64748b',
+    marginTop: 6,
+    textAlign: 'center',
   },
   bbox: {
     position: 'absolute',

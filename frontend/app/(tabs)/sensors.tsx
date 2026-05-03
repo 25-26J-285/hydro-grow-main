@@ -3,7 +3,7 @@ import { View, StyleSheet, Text, ScrollView, ActivityIndicator } from 'react-nat
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/Colors';
-import { sensorAPI } from '../../services/api';
+import { API_BASE_URL, sensorAPI } from '../../services/api';
 
 interface AllSensors {
   temp: number;
@@ -22,6 +22,11 @@ interface DeviceStatus {
   mobile: boolean;
   stationary: boolean;
 }
+
+const isConnected = (device: unknown) =>
+  typeof device === 'boolean'
+    ? device
+    : !!(device && typeof device === 'object' && 'connected' in device && (device as { connected?: boolean }).connected);
 
 function SensorCard({
   icon,
@@ -92,13 +97,13 @@ export default function Sensors() {
       });
 
       setDevices({
-        mobile: deviceData.mobile?.connected ?? false,
-        stationary: deviceData.stationary?.connected ?? false,
+        mobile: isConnected(deviceData.mobile),
+        stationary: isConnected(deviceData.stationary),
       });
 
       setError(null);
     } catch {
-      setError('Unable to reach server. Check network connection.');
+      setError(`Unable to reach server at ${API_BASE_URL}. Check that your phone and computer are on the same Wi-Fi.`);
     } finally {
       setLoading(false);
     }
