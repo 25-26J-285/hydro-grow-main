@@ -1,6 +1,7 @@
 from datetime import datetime
 from pydantic import ValidationError
 
+from app.services.energy_prediction_service import record_sensor_snapshot
 from app.services.state_store import global_state
 from app.schemas.websocket import MobilePayload, StationaryPayload
 
@@ -32,6 +33,7 @@ async def process_mobile_data(raw_data: dict):
     if data.air_quality is not None and data.air_quality < 30:
         print("[WARN]  Poor air quality detected!")
 
+    record_sensor_snapshot()
     print(f"[Mobile] T:{data.temp}C H:{data.hum}% AQ:{data.air_quality}% L:{data.light}% D:{data.dist}cm")
 
 
@@ -100,4 +102,5 @@ async def process_stationary_data(raw_data: dict):
     if data.air_quality is not None and data.air_quality > 70:
         print(f"[WARN]  Poor air quality: {data.air_quality}%")
 
+    record_sensor_snapshot()
     print(f"[Stationary] pH:{data.ph} T:{data.temp}C H:{data.hum}% L:{data.light}% AQ:{data.air_quality}% Power:{data.energy_power}W")

@@ -1,5 +1,6 @@
 import os
 import logging
+import warnings
 
 # Suppress TensorFlow's internal deprecation warnings before import
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"          # hide C++ INFO/WARNING/ERROR logs
@@ -50,6 +51,29 @@ try:
 except Exception as e:
     print(f"[Models] TensorFlow/Rice load error: {e}")
 
+_energy_model = None
+_energy_scaler = None
+try:
+    import joblib
+    from sklearn.exceptions import InconsistentVersionWarning
+
+    warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
+
+    if os.path.exists(settings.ENERGY_SCALER_PATH):
+        _energy_scaler = joblib.load(settings.ENERGY_SCALER_PATH)
+
+    if _tf_available and os.path.exists(settings.ENERGY_MODEL_PATH):
+        _energy_model = tf.keras.models.load_model(settings.ENERGY_MODEL_PATH)
+
+    if _energy_model and _energy_scaler:
+        print("[Models] Energy predictor loaded")
+    else:
+        print("[Models] Energy model/scaler not found - /api/sensor/energy prediction unavailable")
+except Exception as e:
+    _energy_model = None
+    _energy_scaler = None
+    print(f"[Models] Energy model load error: {e}")
+
 
 # ── Public accessors ──────────────────────────────────────────────────────────
 def get_yolo_model():
@@ -62,6 +86,14 @@ def get_germination_model():
 
 def get_rice_model():
     return _rice_model
+
+
+def get_energy_model():
+    return _energy_model
+
+
+def get_energy_scaler():
+    return _energy_scaler
 
 
 def is_tf_available() -> bool:
