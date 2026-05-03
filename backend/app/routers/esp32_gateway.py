@@ -9,6 +9,36 @@ from app.services import control_service, image_service, sensor_service
 router = APIRouter()
 
 
+def _looks_like_network_disconnect(exc: Exception) -> bool:
+    message = str(exc).lower()
+    disconnect_markers = (
+        "winerror 121",
+        "semaphore timeout period has expired",
+        "connection closed",
+        "connection reset",
+        "socket hang up",
+        "network name is no longer available",
+        "broken pipe",
+        "unexpected asgi message",
+    )
+    return any(marker in message for marker in disconnect_markers)
+
+
+def _mark_device_disconnected(device_type: str) -> None:
+    from app.services.state_store import global_state
+
+    device_state = global_state["devices"].get(device_type)
+    if device_state is not None:
+        device_state["connected"] = False
+
+
+def _log_receive_error(device_type: str, exc: Exception) -> None:
+    if _looks_like_network_disconnect(exc):
+        print(f"[WS] {device_type} network timeout/disconnect")
+    else:
+        print(f"[WS] {device_type} receive error: {exc}")
+
+
 class ConnectionManager:
     def __init__(self):
         self.active_connections: dict = {
@@ -28,6 +58,10 @@ class ConnectionManager:
         self.active_connections[device_type] = websocket
 
         from app.services.state_store import global_state
+        device_state = global_state["devices"].get(device_type)
+        if device_state is not None:
+            device_state["connected"] = True
+            device_state["last_seen"] = datetime.now().isoformat()
 
         if device_type == "camera":
             sync_payload = {
@@ -49,8 +83,11 @@ class ConnectionManager:
         print(f"[WS] {device_type} connected - actuator state synced")
 
     def disconnect(self, device_type: str):
+        was_connected = self.active_connections[device_type] is not None
         self.active_connections[device_type] = None
-        print(f"[WS] {device_type} disconnected")
+        _mark_device_disconnected(device_type)
+        if was_connected:
+            print(f"[WS] {device_type} disconnected")
 
     async def send_command(self, target: str, data: dict) -> bool:
         ws = self.active_connections.get(target)
@@ -80,11 +117,19 @@ async def ws_stationary(websocket: WebSocket):
                 data = await websocket.receive_json()
             except WebSocketDisconnect:
                 raise
-            except Exception:
+            except Exception as exc:
+                if _looks_like_network_disconnect(exc):
+                    _log_receive_error("stationary", exc)
+                    break
                 print("[WS] Stationary: malformed message, skipping")
                 continue
             await sensor_service.process_stationary_data(data)
     except WebSocketDisconnect:
+        manager.disconnect("stationary")
+    except Exception as exc:
+        _log_receive_error("stationary", exc)
+        manager.disconnect("stationary")
+    finally:
         manager.disconnect("stationary")
 
 
@@ -98,11 +143,19 @@ async def ws_mobile(websocket: WebSocket):
                 data = await websocket.receive_json()
             except WebSocketDisconnect:
                 raise
-            except Exception:
+            except Exception as exc:
+                if _looks_like_network_disconnect(exc):
+                    _log_receive_error("mobile", exc)
+                    break
                 print("[WS] Mobile: malformed message, skipping")
                 continue
             await sensor_service.process_mobile_data(data)
     except WebSocketDisconnect:
+        manager.disconnect("mobile")
+    except Exception as exc:
+        _log_receive_error("mobile", exc)
+        manager.disconnect("mobile")
+    finally:
         manager.disconnect("mobile")
 
 
@@ -123,10 +176,23 @@ async def ws_camera(websocket: WebSocket):
                     global_state["devices"]["camera"]["connected"] = True
                     global_state["devices"]["camera"]["last_seen"] = datetime.now().isoformat()
                     print(f"[Camera] Heartbeat - heap:{data.get('heap')}")
-            except Exception:
+            except WebSocketDisconnect:
+                raise
+            except json.JSONDecodeError:
+                print("[WS] Camera: malformed heartbeat, skipping")
+                continue
+            except Exception as exc:
+                if _looks_like_network_disconnect(exc):
+                    _log_receive_error("camera", exc)
+                    break
+                print(f"[WS] Camera receive error: {exc}")
                 continue
     except WebSocketDisconnect:
-        global_state["devices"]["camera"]["connected"] = False
+        manager.disconnect("camera")
+    except Exception as exc:
+        _log_receive_error("camera", exc)
+        manager.disconnect("camera")
+    finally:
         manager.disconnect("camera")
 
 
