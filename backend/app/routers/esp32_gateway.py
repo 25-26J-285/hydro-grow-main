@@ -1,8 +1,10 @@
 import asyncio
 import json
 from datetime import datetime
+
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from app.services import sensor_service, control_service, image_service
+
+from app.services import control_service, image_service, sensor_service
 
 router = APIRouter()
 
@@ -10,38 +12,41 @@ router = APIRouter()
 class ConnectionManager:
     def __init__(self):
         self.active_connections: dict = {
-            "mobile":     None,
+            "mobile": None,
             "stationary": None,
-            "camera":     None,
+            "camera": None,
         }
-        # Per-device send lock — prevents concurrent sends corrupting the WS stream
+        # Per-device send lock prevents concurrent sends from corrupting a WS stream.
         self._send_locks: dict = {
-            "mobile":     asyncio.Lock(),
+            "mobile": asyncio.Lock(),
             "stationary": asyncio.Lock(),
-            "camera":     asyncio.Lock(),
+            "camera": asyncio.Lock(),
         }
 
     async def connect(self, device_type: str, websocket: WebSocket):
         await websocket.accept()
         self.active_connections[device_type] = websocket
+
         from app.services.state_store import global_state
-        # Camera only needs flash state; other devices get full actuator state
+
         if device_type == "camera":
             sync_payload = {
                 "type": "state_sync",
                 "actuators": {
-                    "flash":            global_state["actuators"]["flash"],
+                    "flash": global_state["actuators"]["flash"],
                     "flash_brightness": global_state["actuators"]["flash_brightness"],
                 },
             }
         else:
             sync_payload = {"type": "state_sync", "actuators": global_state["actuators"]}
+
         try:
             async with self._send_locks[device_type]:
                 await websocket.send_json(sync_payload)
         except Exception as e:
             print(f"[WS] {device_type} state sync failed: {e}")
-        print(f"[WS] {device_type} connected — actuator state synced")
+
+        print(f"[WS] {device_type} connected - actuator state synced")
 
     def disconnect(self, device_type: str):
         self.active_connections[device_type] = None
@@ -51,6 +56,7 @@ class ConnectionManager:
         ws = self.active_connections.get(target)
         if ws is None:
             return False
+
         try:
             async with self._send_locks[target]:
                 await ws.send_json(data)
@@ -64,10 +70,9 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
-# ── 1. Stationary gateway (pH, energy) ───────────────────────────────────────
 @router.websocket("/ws/stationary")
 async def ws_stationary(websocket: WebSocket):
-    """WebSocket for stationary ESP32 (pH + energy hub)"""
+    """WebSocket for the main ESP32 DevKit controller (sensors + relays + motion)."""
     await manager.connect("stationary", websocket)
     try:
         while True:
@@ -83,10 +88,9 @@ async def ws_stationary(websocket: WebSocket):
         manager.disconnect("stationary")
 
 
-# ── 2. Mobile gateway (temp, humidity, air, light, distance) ──────────────────
-@router.websocket("/ws/mobile")
+@router.websocket("/ws/mobile-sensors")
 async def ws_mobile(websocket: WebSocket):
-    """WebSocket for mobile ESP32 (robot with sensors)"""
+    """Optional WebSocket for a separate mobile sensor ESP32."""
     await manager.connect("mobile", websocket)
     try:
         while True:
@@ -102,30 +106,23 @@ async def ws_mobile(websocket: WebSocket):
         manager.disconnect("mobile")
 
 
-# ── 3. Camera gateway (binary RGB565 frames + JSON heartbeat) ────────────────
 @router.websocket("/ws/camera")
 async def ws_camera(websocket: WebSocket):
-    """WebSocket for ESP32-CAM (binary RGB565 frames + JSON heartbeat/sensors)"""
+    """WebSocket for ESP32-CAM (binary RGB565 frames + JSON heartbeat)."""
     from app.services.state_store import global_state
+
     await manager.connect("camera", websocket)
     try:
         while True:
             try:
                 message = await websocket.receive()
                 if "bytes" in message and message["bytes"]:
-                    # Raw RGB565 numerical pixel data — converted to JPEG by image_service
                     await image_service.process_frame(message["bytes"], format_type="rgb565")
                 elif "text" in message and message["text"]:
-                    # JSON heartbeat: {"status":"OK","heap":...,"temp":...,"hum":...}
                     data = json.loads(message["text"])
                     global_state["devices"]["camera"]["connected"] = True
                     global_state["devices"]["camera"]["last_seen"] = datetime.now().isoformat()
-                    # Store temp/hum from DHT22 on camera ESP32 into sensor state
-                    if "temp" in data and data["temp"] is not None:
-                        global_state["sensors"]["temp"] = data["temp"]
-                    if "hum" in data and data["hum"] is not None:
-                        global_state["sensors"]["hum"] = data["hum"]
-                    print(f"[Camera] Heartbeat — heap:{data.get('heap')} temp:{data.get('temp')} hum:{data.get('hum')}")
+                    print(f"[Camera] Heartbeat - heap:{data.get('heap')}")
             except Exception:
                 continue
     except WebSocketDisconnect:
@@ -133,10 +130,9 @@ async def ws_camera(websocket: WebSocket):
         manager.disconnect("camera")
 
 
-# ── 4. Control commands ───────────────────────────────────────────────────────
 @router.post("/api/control")
 async def send_control_command(command: dict):
-    """Send control command to ESP32 devices"""
+    """Send control command to ESP32 devices."""
     target = command.get("target")
 
     success = await control_service.process_command(command)
@@ -149,19 +145,19 @@ async def send_control_command(command: dict):
     return {"success": False, "error": f"{target} device not connected"}
 
 
-# ── 4. System state ───────────────────────────────────────────────────────────
 @router.get("/api/state")
 async def get_system_state():
-    """Get current system state"""
+    """Get current system state."""
     from app.services.state_store import global_state
+
     return global_state
 
 
 @router.get("/api/devices/status")
 async def get_devices_status():
-    """Check which devices are connected"""
+    """Check which devices are connected."""
     return {
-        "mobile":     manager.active_connections["mobile"]     is not None,
+        "mobile": manager.active_connections["mobile"] is not None,
         "stationary": manager.active_connections["stationary"] is not None,
-        "camera":     manager.active_connections["camera"]     is not None,
+        "camera": manager.active_connections["camera"] is not None,
     }

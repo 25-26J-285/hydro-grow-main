@@ -36,7 +36,31 @@ async def process_mobile_data(raw_data: dict):
 
 
 async def process_stationary_data(raw_data: dict):
-    """Validate and process data from stationary ESP32 (pH, energy)"""
+    """Validate and process data from stationary ESP32 controller."""
+    if raw_data.get("type") == "heartbeat":
+        global_state["devices"]["stationary"]["connected"] = True
+        now = datetime.now().isoformat()
+        global_state["devices"]["stationary"]["last_seen"] = now
+        global_state["devices"]["stationary"]["last_heartbeat"] = now
+        global_state["devices"]["stationary"]["heartbeat"] = {
+            "status": raw_data.get("status", "UNKNOWN"),
+            "heap": raw_data.get("heap"),
+            "wifi_rssi": raw_data.get("wifi_rssi"),
+            "safe_mode": raw_data.get("safe_mode"),
+            "homing": raw_data.get("homing"),
+            "motor_enabled": raw_data.get("motor_enabled"),
+            "sensors": raw_data.get("sensors", {}),
+            "actuators": raw_data.get("actuators", {}),
+            "limits": raw_data.get("limits", {}),
+        }
+        print(
+            "[Stationary] Heartbeat "
+            f"status:{raw_data.get('status')} "
+            f"safe_mode:{raw_data.get('safe_mode')} "
+            f"rssi:{raw_data.get('wifi_rssi')}"
+        )
+        return
+
     try:
         data = StationaryPayload(**raw_data)
     except ValidationError as e:

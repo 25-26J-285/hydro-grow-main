@@ -10,10 +10,11 @@ A full-stack React Native + FastAPI application for monitoring and controlling h
 ### Terminal 1: Start Backend FastAPI Server
 ```powershell
 cd backend
-.\.venv\Scripts\uvicorn.exe app.main:app --host 127.0.0.1 --port 8000
+.\.venv\Scripts\uvicorn.exe app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ✅ Backend running at: `http://localhost:8000`
+✅ ESP32/mobile devices can connect over the local network
 
 ### Terminal 2: Start Frontend HTTP Server  
 ```powershell
@@ -45,14 +46,16 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install fastapi uvicorn pydantic python-jose python-multipart PyJWT cryptography passlib
 
 # Start the server
-.\.venv\Scripts\uvicorn.exe app.main:app --host 127.0.0.1 --port 8000
+.\.venv\Scripts\uvicorn.exe app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 **Expected output:**
 ```
-INFO:     Uvicorn running on http://127.0.0.1:8000
+INFO:     Uvicorn running on http://0.0.0.0:8000
 INFO:     Application startup complete
 ```
+
+**Important:** Use `0.0.0.0`, not `127.0.0.1`, when ESP32 devices need to reach the backend from the network.
 
 ### Step 2: Frontend Setup (React Native + Web Preview)
 
@@ -286,7 +289,7 @@ netstat -ano | findstr :8000
 taskkill /PID 12345 /F
 
 # Or use a different port
-.\.venv\Scripts\uvicorn.exe app.main:app --host 127.0.0.1 --port 8001
+.\.venv\Scripts\uvicorn.exe app.main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
 ### ModuleNotFoundError in backend

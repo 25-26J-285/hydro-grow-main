@@ -30,7 +30,12 @@ global_state = {
         "flash_brightness": 0,    # 0-255
     },
     "devices": {
-        "stationary": {"connected": False, "last_seen": None},
+        "stationary": {
+            "connected": False,
+            "last_seen": None,
+            "last_heartbeat": None,
+            "heartbeat": {},
+        },
         "mobile":     {"connected": False, "last_seen": None},
         "camera":     {"connected": False, "last_seen": None},
     },

@@ -115,7 +115,7 @@ curl -X POST http://localhost:8000/api/register \
 **Terminal 1 - Backend:**
 ```powershell
 cd backend
-.\.venv\Scripts\uvicorn.exe app.main:app --host 127.0.0.1 --port 8000
+.\.venv\Scripts\uvicorn.exe app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 **Terminal 2 - Frontend:**
