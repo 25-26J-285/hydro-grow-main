@@ -7,22 +7,23 @@ import {
   TouchableOpacity,
   StatusBar,
   Alert,
-  Image,
   ActivityIndicator,
-  TextInput,
   Platform,
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import Colors from '../constants/Colors';
 import { API_BASE_URL } from '../services/api';
+import { captureBackendSnapshot } from '../services/snapshotCapture';
 
 const DEFAULT_BACKEND_URL = API_BASE_URL || 'http://localhost:8000';
 
 type PickerImage = {
   uri: string;
+  previewUri: string;
   name: string;
   mimeType: string;
   webFile?: any | null;
@@ -42,11 +43,12 @@ type PredictionResponse = {
 
 export default function SeedIdentification() {
   const router = useRouter();
-  const [backendUrl, setBackendUrl] = useState(DEFAULT_BACKEND_URL);
   const [selectedImage, setSelectedImage] = useState<PickerImage | null>(null);
   const [analysis, setAnalysis] = useState<PredictionResponse | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCapturingSnapshot, setIsCapturingSnapshot] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [previewLoadFailed, setPreviewLoadFailed] = useState(false);
 
   const previewSubtitle = useMemo(() => {
     if (!selectedImage) {
@@ -65,8 +67,9 @@ export default function SeedIdentification() {
     return `${(value * 100).toFixed(1)}%`;
   };
 
-  const buildImagePayload = (asset: ImagePicker.ImagePickerAsset): PickerImage => ({
+const buildImagePayload = (asset: ImagePicker.ImagePickerAsset): PickerImage => ({
   uri: asset.uri,
+  previewUri: asset.base64 ? `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}` : asset.uri,
   name: asset.fileName || `rice-scan-${Date.now()}.jpg`,
   mimeType: asset.mimeType || 'image/jpeg',
   webFile: (asset as any).file ?? null,
@@ -84,6 +87,7 @@ export default function SeedIdentification() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       quality: 0.9,
+      base64: true,
     });
 
     if (result.canceled || !result.assets?.length) {
@@ -91,6 +95,7 @@ export default function SeedIdentification() {
     }
 
     setSelectedImage(buildImagePayload(result.assets[0]));
+    setPreviewLoadFailed(false);
     setAnalysis(null);
     setErrorMessage(null);
   };
@@ -107,6 +112,7 @@ export default function SeedIdentification() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       quality: 0.9,
+      base64: true,
     });
 
     if (result.canceled || !result.assets?.length) {
@@ -114,8 +120,25 @@ export default function SeedIdentification() {
     }
 
     setSelectedImage(buildImagePayload(result.assets[0]));
+    setPreviewLoadFailed(false);
     setAnalysis(null);
     setErrorMessage(null);
+  };
+
+  const handleCameraModeCapture = async () => {
+    setIsCapturingSnapshot(true);
+    setErrorMessage(null);
+
+    try {
+      const snapshot = await captureBackendSnapshot('seed-camera-mode');
+      setSelectedImage(snapshot);
+      setPreviewLoadFailed(false);
+      setAnalysis(null);
+    } catch {
+      setErrorMessage('Unable to fetch a live camera snapshot right now. Please check the camera connection and try again.');
+    } finally {
+      setIsCapturingSnapshot(false);
+    }
   };
 
   const handleAnalyze = async () => {
@@ -124,9 +147,9 @@ export default function SeedIdentification() {
       return;
     }
 
-    const normalizedUrl = sanitizeUrl(backendUrl);
+    const normalizedUrl = sanitizeUrl(DEFAULT_BACKEND_URL);
     if (!normalizedUrl) {
-      Alert.alert('Backend URL required', 'Please enter your backend server URL.');
+      Alert.alert('Server unavailable', 'The backend server is not configured.');
       return;
     }
 
@@ -167,17 +190,12 @@ const response = await fetch(`${normalizedUrl}/api/predict-rice`, {
       }
 
       if (!response.ok) {
-        const detail =
-          payload?.detail ||
-          payload?.message ||
-          rawText ||
-          'Prediction failed. Please verify the backend URL and try again.';
-        throw new Error(detail);
+        throw new Error('Prediction failed.');
       }
 
       setAnalysis(payload as PredictionResponse);
-    } catch (error: any) {
-      const message = error?.message || 'Unable to analyze the selected image.';
+    } catch {
+      const message = 'Unable to analyze the image right now. Please check the backend connection and try again.';
       setAnalysis(null);
       setErrorMessage(message);
     } finally {
@@ -189,6 +207,7 @@ const response = await fetch(`${normalizedUrl}/api/predict-rice`, {
     setSelectedImage(null);
     setAnalysis(null);
     setErrorMessage(null);
+    setPreviewLoadFailed(false);
   };
 
   const handleBack = () => {
@@ -240,22 +259,6 @@ const response = await fetch(`${normalizedUrl}/api/predict-rice`, {
           </View>
         </View>
 
-        <View style={styles.configCard}>
-          <Text style={styles.configLabel}>Backend URL</Text>
-          <TextInput
-            value={backendUrl}
-            onChangeText={setBackendUrl}
-            autoCapitalize="none"
-            autoCorrect={false}
-            placeholder="http://10.0.2.2:8000"
-            style={styles.urlInput}
-            placeholderTextColor="#94a3b8"
-          />
-          <Text style={styles.helperText}>
-            Emulator: 10.0.2.2 | Real phone: use your computer&apos;s local IP address.
-          </Text>
-        </View>
-
         <View style={styles.actionRow}>
           <TouchableOpacity style={styles.actionCard} onPress={handleGalleryPick} activeOpacity={0.9}>
             <View style={styles.actionIconCircle}>
@@ -271,6 +274,23 @@ const response = await fetch(`${normalizedUrl}/api/predict-rice`, {
             </View>
             <Text style={styles.actionTitle}>Camera</Text>
             <Text style={styles.actionCaption}>Capture a fresh image</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={handleCameraModeCapture}
+            activeOpacity={0.9}
+            disabled={isCapturingSnapshot}
+          >
+            <View style={styles.actionIconCircle}>
+              {isCapturingSnapshot ? (
+                <ActivityIndicator color={Colors.primary} />
+              ) : (
+                <Ionicons name="videocam-outline" size={26} color={Colors.primary} />
+              )}
+            </View>
+            <Text style={styles.actionTitle}>Camera Mode</Text>
+            <Text style={styles.actionCaption}>Use the live backend snapshot</Text>
           </TouchableOpacity>
         </View>
 
@@ -289,7 +309,24 @@ const response = await fetch(`${normalizedUrl}/api/predict-rice`, {
           </View>
 
           {selectedImage ? (
-            <Image source={{ uri: selectedImage.uri }} style={styles.previewImage} />
+            <View style={styles.imageWrapper}>
+              {!previewLoadFailed ? (
+                <ExpoImage
+                  key={selectedImage.previewUri}
+                  source={{ uri: selectedImage.previewUri }}
+                  style={styles.previewImage}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                  onError={() => setPreviewLoadFailed(true)}
+                />
+              ) : (
+                <View style={styles.previewFallback}>
+                  <MaterialCommunityIcons name="image-broken-variant" size={44} color="#94a3b8" />
+                  <Text style={styles.previewFallbackTitle}>Preview unavailable</Text>
+                  <Text style={styles.previewFallbackText}>The image was selected, but the phone could not render this file preview.</Text>
+                </View>
+              )}
+            </View>
           ) : (
             <View style={styles.emptyPreview}>
               <MaterialCommunityIcons name="image-search-outline" size={52} color="#94a3b8" />
@@ -501,39 +538,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: '#166534',
   },
-  configCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 18,
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 2,
-  },
-  configLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#334155',
-    marginBottom: 8,
-  },
-  urlInput: {
-    borderWidth: 1,
-    borderColor: '#dbe4ee',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: '#0f172a',
-    backgroundColor: '#f8fafc',
-  },
-  helperText: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: '#64748b',
-    marginTop: 8,
-  },
   actionRow: {
     flexDirection: 'row',
     gap: 12,
@@ -613,11 +617,37 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.primary,
   },
-  previewImage: {
+  imageWrapper: {
     width: '100%',
     height: 220,
     borderRadius: 18,
+    overflow: 'hidden',
     backgroundColor: '#e2e8f0',
+  },
+  previewImage: {
+    width: '100%',
+    height: 220,
+    backgroundColor: '#e2e8f0',
+  },
+  previewFallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  previewFallbackTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#475569',
+    marginTop: 12,
+  },
+  previewFallbackText: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#64748b',
+    marginTop: 6,
+    textAlign: 'center',
   },
   emptyPreview: {
     borderRadius: 18,
