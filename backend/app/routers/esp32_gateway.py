@@ -16,6 +16,8 @@ def _looks_like_network_disconnect(exc: Exception) -> bool:
         "semaphore timeout period has expired",
         "connection closed",
         "connection reset",
+        "disconnect message has been received",
+        "cannot call \"receive\" once a disconnect message has been received",
         "socket hang up",
         "network name is no longer available",
         "broken pipe",
@@ -169,6 +171,8 @@ async def ws_camera(websocket: WebSocket):
         while True:
             try:
                 message = await websocket.receive()
+                if message.get("type") == "websocket.disconnect":
+                    break
                 if "bytes" in message and message["bytes"]:
                     await image_service.process_frame(message["bytes"], format_type="rgb565")
                 elif "text" in message and message["text"]:
