@@ -17,6 +17,8 @@ def _looks_like_network_disconnect(exc: Exception) -> bool:
         "disconnect message has been received",
         "connection closed",
         "connection reset",
+        "disconnect message has been received",
+        "cannot call \"receive\" once a disconnect message has been received",
         "socket hang up",
         "network name is no longer available",
         "broken pipe",
