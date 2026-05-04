@@ -3,6 +3,7 @@ from app.services.state_store import global_state
 from app.routers.esp32_gateway import manager
 from app.services import control_service
 from app.services.energy_prediction_service import get_energy_prediction
+from app.services.sensor_repository import get_latest_sensor_readings, get_sensor_history
 
 router = APIRouter()
 
@@ -50,6 +51,24 @@ async def get_energy_snapshot():
         "power": sensors["energy_power"],
         "total_energy": sensors["energy_total"],
         "prediction": get_energy_prediction(),
+    }
+
+
+@router.get("/api/sensors/latest")
+async def get_latest_persisted_sensors():
+    """Return the most recent MongoDB-backed readings for each device."""
+    return await get_latest_sensor_readings()
+
+
+@router.get("/api/sensors/history")
+async def get_persisted_sensor_history(device_type: str | None = None, limit: int = 50):
+    """Return sensor history from MongoDB."""
+    normalized_device_type = device_type if device_type in {None, "mobile", "stationary"} else None
+    safe_limit = max(1, min(limit, 200))
+    return {
+        "items": await get_sensor_history(device_type=normalized_device_type, limit=safe_limit),
+        "device_type": normalized_device_type,
+        "limit": safe_limit,
     }
 
 
