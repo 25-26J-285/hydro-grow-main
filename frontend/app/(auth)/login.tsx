@@ -14,16 +14,63 @@ import Colors from '../../constants/Colors';
 import { InputField, CustomButton } from '../../components';
 import { authService } from '../../services/authService';
 
+const EMAIL_ALLOWED_REGEX = /[^a-zA-Z0-9@._-]/g;
+const PASSWORD_ALLOWED_REGEX = /[^a-zA-Z0-9]/g;
+
 export default function LoginScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState('farmer@example.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+
+  const handleEmailChange = (value: string) => {
+    const sanitized = value.replace(EMAIL_ALLOWED_REGEX, '').toLowerCase();
+    setEmail(sanitized);
+    if (emailError) {
+      setEmailError('');
+    }
+  };
+
+  const handlePasswordChange = (value: string) => {
+    const sanitized = value.replace(PASSWORD_ALLOWED_REGEX, '');
+    setPassword(sanitized);
+    if (passwordError) {
+      setPasswordError('');
+    }
+  };
+
+  const validateForm = () => {
+    let valid = true;
+
+    if (!email) {
+      setEmailError('Email is required.');
+      valid = false;
+    } else if (!/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+      setEmailError('Enter a valid email address.');
+      valid = false;
+    } else {
+      setEmailError('');
+    }
+
+    if (!password) {
+      setPasswordError('Password is required.');
+      valid = false;
+    } else if (!/^[a-zA-Z0-9]+$/.test(password)) {
+      setPasswordError('Password can use only letters and numbers.');
+      valid = false;
+    } else {
+      setPasswordError('');
+    }
+
+    return valid;
+  };
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password');
+    if (!validateForm()) {
+      Alert.alert('Error', 'Please correct the highlighted fields.');
       return;
     }
 
@@ -47,10 +94,6 @@ export default function LoginScreen() {
     router.push('/(auth)/register');
   };
 
-  const handleSkip = () => {
-    router.replace('/(tabs)/home');
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -60,15 +103,15 @@ export default function LoginScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Login</Text>
-          <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-            <Text style={styles.skipText}>Skip</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Main Content */}
         <View style={styles.mainContent}>
           <Text style={styles.welcomeTitle}>Welcome to HydroGrow</Text>
           <Text style={styles.welcomeSub}>Sign in to your account</Text>
+          <Text style={styles.helperText}>
+            Use the account you registered in MongoDB to access your dashboard.
+          </Text>
 
           <Text style={styles.sectionTitle}>Let's get started</Text>
           <Text style={styles.sectionSub}>
@@ -80,10 +123,11 @@ export default function LoginScreen() {
             label="Email"
             placeholder="Enter your email"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={handleEmailChange}
             keyboardType="email-address"
             autoCapitalize="none"
             editable={!loading}
+            error={emailError}
             icon={<MaterialIcons name="email" size={20} color={Colors.gray} />}
           />
 
@@ -92,9 +136,10 @@ export default function LoginScreen() {
             label="Password"
             placeholder="Enter your password"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={handlePasswordChange}
             secureTextEntry
             editable={!loading}
+            error={passwordError}
             icon={<MaterialIcons name="lock" size={20} color={Colors.gray} />}
           />
 
@@ -124,25 +169,6 @@ export default function LoginScreen() {
             onPress={handleLogin}
             disabled={loading}
           />
-
-          {/* Divider */}
-          <View style={styles.orRow}>
-            <View style={styles.hr} />
-            <Text style={styles.orText}>OR</Text>
-            <View style={styles.hr} />
-          </View>
-
-          {/* Social Buttons */}
-          <CustomButton
-            title="Continue with Google"
-            variant="outline"
-            disabled={loading}
-          />
-          <CustomButton
-            title="Continue with Apple"
-            variant="outline"
-            disabled={loading}
-          />
         </View>
 
         {/* Sign Up Link */}
@@ -169,26 +195,14 @@ const styles = StyleSheet.create({
   header: {
     height: 60,
     backgroundColor: Colors.primary,
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingHorizontal: 16,
-    flexDirection: 'row',
     alignItems: 'center',
   },
   headerTitle: {
     color: '#fff',
     fontSize: 20,
     fontWeight: '700',
-  },
-  skipButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  skipText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
   },
   mainContent: {
     padding: 20,
@@ -203,7 +217,13 @@ const styles = StyleSheet.create({
   welcomeSub: {
     textAlign: 'center',
     color: '#777',
+    marginBottom: 8,
+  },
+  helperText: {
+    textAlign: 'center',
+    color: '#666',
     marginBottom: 24,
+    lineHeight: 20,
   },
   sectionTitle: {
     fontSize: 18,
@@ -244,21 +264,6 @@ const styles = StyleSheet.create({
   },
   forgot: {
     color: Colors.primary,
-    fontWeight: '600',
-  },
-  orRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  hr: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#e0e0e0',
-  },
-  orText: {
-    marginHorizontal: 12,
-    color: '#999',
     fontWeight: '600',
   },
   signupRow: {

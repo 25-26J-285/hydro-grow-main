@@ -1,20 +1,20 @@
-import { Stack } from 'expo-router';
+import { Stack, usePathname, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
 import authService from '../services/authService';
-import Colors from '../constants/Colors';
 
 export default function RootLayout() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
+  const segments = useSegments();
 
   useEffect(() => {
-    initializeApp();
+    refreshAuthState();
   }, []);
 
-  const initializeApp = async () => {
+  const refreshAuthState = async () => {
     try {
-      // Initialize auth service (restore token if it exists)
       await authService.initialize();
-      // Check if user is logged in
       const loggedIn = await authService.isLoggedIn();
       setIsLoggedIn(loggedIn);
     } catch (error) {
@@ -22,6 +22,24 @@ export default function RootLayout() {
       setIsLoggedIn(false);
     }
   };
+
+  useEffect(() => {
+    refreshAuthState();
+  }, [pathname]);
+
+  useEffect(() => {
+    if (isLoggedIn === null) {
+      return;
+    }
+
+    const inAuthFlow = segments[0] === '(auth)' || pathname === '/onboarding';
+
+    if (isLoggedIn && inAuthFlow) {
+      router.replace('/(tabs)/home');
+    } else if (!isLoggedIn && !inAuthFlow) {
+      router.replace('/(auth)/login');
+    }
+  }, [isLoggedIn, pathname, router, segments]);
 
   if (isLoggedIn === null) {
     // Loading state
@@ -34,16 +52,9 @@ export default function RootLayout() {
         headerShown: false,
       }}
     >
-      {isLoggedIn ? (
-        // App Stack (logged in)
-        <Stack.Screen name="(tabs)" />
-      ) : (
-        // Auth Stack (not logged in)
-        <>
-          <Stack.Screen name="onboarding" />
-          <Stack.Screen name="(auth)" />
-        </>
-      )}
+      <Stack.Screen name="onboarding" />
+      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="(tabs)" />
     </Stack>
   );
 }

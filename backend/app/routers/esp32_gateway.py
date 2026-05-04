@@ -14,6 +14,7 @@ def _looks_like_network_disconnect(exc: Exception) -> bool:
     disconnect_markers = (
         "winerror 121",
         "semaphore timeout period has expired",
+        "disconnect message has been received",
         "connection closed",
         "connection reset",
         "disconnect message has been received",

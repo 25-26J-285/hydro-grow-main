@@ -2,6 +2,7 @@ from datetime import datetime
 from pydantic import ValidationError
 
 from app.services.energy_prediction_service import record_sensor_snapshot
+from app.services.sensor_repository import save_sensor_reading
 from app.services.state_store import global_state
 from app.schemas.websocket import MobilePayload, StationaryPayload
 
@@ -34,6 +35,19 @@ async def process_mobile_data(raw_data: dict):
         print("[WARN]  Poor air quality detected!")
 
     record_sensor_snapshot()
+    try:
+        await save_sensor_reading(
+            "mobile",
+            {
+                "temp": data.temp,
+                "hum": data.hum,
+                "air_quality": data.air_quality,
+                "dist": data.dist,
+                "light": data.light,
+            },
+        )
+    except Exception as exc:
+        print(f"[MongoDB] Failed to save mobile sensor reading: {exc}")
     print(f"[Mobile] T:{data.temp}C H:{data.hum}% AQ:{data.air_quality}% L:{data.light}% D:{data.dist}cm")
 
 
@@ -103,4 +117,22 @@ async def process_stationary_data(raw_data: dict):
         print(f"[WARN]  Poor air quality: {data.air_quality}%")
 
     record_sensor_snapshot()
+    try:
+        await save_sensor_reading(
+            "stationary",
+            {
+                "ph": data.ph,
+                "energy_status": data.energy_status,
+                "energy_voltage": data.energy_voltage,
+                "energy_current": data.energy_current,
+                "energy_power": data.energy_power,
+                "energy_total": data.energy_total,
+                "temp": data.temp,
+                "hum": data.hum,
+                "light": data.light,
+                "air_quality": data.air_quality,
+            },
+        )
+    except Exception as exc:
+        print(f"[MongoDB] Failed to save stationary sensor reading: {exc}")
     print(f"[Stationary] pH:{data.ph} T:{data.temp}C H:{data.hum}% L:{data.light}% AQ:{data.air_quality}% Power:{data.energy_power}W")

@@ -8,7 +8,7 @@ export const authService = {
   // Login user
   login: async (email: string, password: string) => {
     try {
-      const response = await authAPI.login(email, password);
+      const response = await authAPI.login(email.trim().toLowerCase(), password);
       const { access_token, user } = response.data;
 
       // Save token and user data
@@ -27,7 +27,11 @@ export const authService = {
   // Register new user
   register: async (email: string, password: string, fullname?: string) => {
     try {
-      const response = await authAPI.register(email, password, fullname);
+      const response = await authAPI.register(
+        email.trim().toLowerCase(),
+        password,
+        fullname?.trim()
+      );
       return response.data;
     } catch (error) {
       throw error;
