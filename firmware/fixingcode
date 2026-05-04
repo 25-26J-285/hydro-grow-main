@@ -91,6 +91,39 @@ const unsigned long MAX_PUMP_TIME_MS = 90000;
 const unsigned long WIFI_CONNECT_TIMEOUT_MS = 20000;
 const unsigned long MDNS_LOG_INTERVAL_MS = 30000;
 
+const float ADC_VREF = 3.3f;
+const float ADC_MAX = 4095.0f;
+
+const float DHT_TEMP_OFFSET_C = 0.0f;
+const float DHT_HUM_OFFSET_PERCENT = 0.0f;
+
+const float PH_NEUTRAL_VOLTAGE = 2.50f;
+const float PH_SLOPE = -5.70f;
+const float PH_OFFSET = 7.00f;
+const int PH_SAMPLE_COUNT = 10;
+
+const int LDR_BRIGHT_ADC = 1200;
+const int LDR_DARK_ADC = 4095;
+
+const int MQ135_CLEAN_AIR_ADC = 350;
+const int MQ135_POOR_AIR_ADC = 3000;
+
+const float PZEM_VOLTAGE_RAW_REF = 240.0f;
+const float PZEM_VOLTAGE_TRUE_REF = 240.0f;
+const float PZEM_VOLTAGE_OFFSET = 0.0f;
+const float PZEM_CURRENT_RAW_REF = 1.000f;
+const float PZEM_CURRENT_TRUE_REF = 1.000f;
+const float PZEM_CURRENT_OFFSET = 0.0f;
+const float PZEM_POWER_RAW_REF = 240.0f;
+const float PZEM_POWER_TRUE_REF = 240.0f;
+const float PZEM_POWER_OFFSET = 0.0f;
+const float PZEM_ENERGY_RAW_REF = 1.000f;
+const float PZEM_ENERGY_TRUE_REF = 1.000f;
+const float PZEM_ENERGY_OFFSET = 0.0f;
+const float PZEM_ZERO_CURRENT_THRESHOLD_A = 0.010f;
+const float PZEM_ZERO_POWER_THRESHOLD_W = 0.50f;
+const float PZEM_ZERO_ENERGY_THRESHOLD_KWH = 0.001f;
+
 // ==========================================
 // HELPERS
 // ==========================================
@@ -104,6 +137,31 @@ void setRelayState(uint8_t pin, bool on) {
   }
 
   pinMode(pin, on ? OUTPUT : INPUT);
+}
+
+int readAveragedAnalog(uint8_t pin, int sampleCount) {
+  long total = 0;
+  for (int i = 0; i < sampleCount; i++) {
+    total += analogRead(pin);
+    delay(5);
+  }
+  return total / sampleCount;
+}
+
+float clampPercent(float value) {
+  return constrain(value, 0.0f, 100.0f);
+}
+
+float applyLinearCalibration(float rawValue, float scale, float offset) {
+  return (rawValue * scale) + offset;
+}
+
+float calibrationScale(float rawReference, float trueReference) {
+  if (rawReference <= 0.0f || trueReference <= 0.0f) {
+    return 1.0f;
+  }
+
+  return trueReference / rawReference;
 }
 
 void allOutputsSafeOff() {
@@ -447,16 +505,78 @@ void onMessageCallback(WebsocketsMessage message) {
 // SENSOR PACKET
 // ==========================================
 float readPhValue() {
-  float phVoltage = analogRead(PH_SENSOR_PIN) * (3.3f / 4095.0f);
-  return -5.70f * phVoltage + 21.34f;
+  int rawPh = readAveragedAnalog(PH_SENSOR_PIN, PH_SAMPLE_COUNT);
+  float phVoltage = rawPh * (ADC_VREF / ADC_MAX);
+  float calibratedPh = PH_OFFSET + (PH_SLOPE * (phVoltage - PH_NEUTRAL_VOLTAGE));
+  return constrain(calibratedPh, 0.0f, 14.0f);
 }
 
 float readLightPercent() {
-  return 100.0f - (analogRead(LDR_PIN) / 4095.0f * 100.0f);
+  int rawLdr = readAveragedAnalog(LDR_PIN, 5);
+  float lightPercent = map(rawLdr, LDR_DARK_ADC, LDR_BRIGHT_ADC, 0, 100);
+  return clampPercent(lightPercent);
 }
 
 float readAirQualityPercent() {
-  return analogRead(MQ135_PIN) / 4095.0f * 100.0f;
+  int rawMq135 = readAveragedAnalog(MQ135_PIN, 10);
+  float airQualityPercent = map(rawMq135, MQ135_CLEAN_AIR_ADC, MQ135_POOR_AIR_ADC, 0, 100);
+  return clampPercent(airQualityPercent);
+}
+
+float readCalibratedTemperature() {
+  float temp = dht.readTemperature();
+  return isnan(temp) ? temp : temp + DHT_TEMP_OFFSET_C;
+}
+
+float readCalibratedHumidity() {
+  float hum = dht.readHumidity();
+  if (isnan(hum)) return hum;
+  return clampPercent(hum + DHT_HUM_OFFSET_PERCENT);
+}
+
+float readCalibratedVoltage() {
+  float voltage = pzem.voltage();
+  return isnan(voltage) ? voltage : applyLinearCalibration(
+    voltage,
+    calibrationScale(PZEM_VOLTAGE_RAW_REF, PZEM_VOLTAGE_TRUE_REF),
+    PZEM_VOLTAGE_OFFSET
+  );
+}
+
+float readCalibratedCurrent() {
+  float current = pzem.current();
+  if (isnan(current)) return current;
+
+  float calibratedCurrent = applyLinearCalibration(
+    current,
+    calibrationScale(PZEM_CURRENT_RAW_REF, PZEM_CURRENT_TRUE_REF),
+    PZEM_CURRENT_OFFSET
+  );
+  return fabs(calibratedCurrent) < PZEM_ZERO_CURRENT_THRESHOLD_A ? 0.0f : calibratedCurrent;
+}
+
+float readCalibratedPower() {
+  float power = pzem.power();
+  if (isnan(power)) return power;
+
+  float calibratedPower = applyLinearCalibration(
+    power,
+    calibrationScale(PZEM_POWER_RAW_REF, PZEM_POWER_TRUE_REF),
+    PZEM_POWER_OFFSET
+  );
+  return fabs(calibratedPower) < PZEM_ZERO_POWER_THRESHOLD_W ? 0.0f : calibratedPower;
+}
+
+float readCalibratedEnergy() {
+  float energy = pzem.energy();
+  if (isnan(energy)) return energy;
+
+  float calibratedEnergy = applyLinearCalibration(
+    energy,
+    calibrationScale(PZEM_ENERGY_RAW_REF, PZEM_ENERGY_TRUE_REF),
+    PZEM_ENERGY_OFFSET
+  );
+  return fabs(calibratedEnergy) < PZEM_ZERO_ENERGY_THRESHOLD_KWH ? 0.0f : calibratedEnergy;
 }
 
 const char* getPhStatus(float phValue) {
@@ -480,7 +600,7 @@ void sendSensorPacket() {
 
   doc["ph"] = readPhValue();
 
-  float power = pzem.power();
+  float power = readCalibratedPower();
   if (isnan(power)) {
     doc["energy_status"] = "ERROR";
     doc["energy_voltage"] = 0.0;
@@ -489,14 +609,14 @@ void sendSensorPacket() {
     doc["energy_total"] = 0.0;
   } else {
     doc["energy_status"] = "OK";
-    doc["energy_voltage"] = pzem.voltage();
-    doc["energy_current"] = pzem.current();
+    doc["energy_voltage"] = readCalibratedVoltage();
+    doc["energy_current"] = readCalibratedCurrent();
     doc["energy_power"] = power;
-    doc["energy_total"] = pzem.energy();
+    doc["energy_total"] = readCalibratedEnergy();
   }
 
-  float temp = dht.readTemperature();
-  float hum = dht.readHumidity();
+  float temp = readCalibratedTemperature();
+  float hum = readCalibratedHumidity();
   if (!isnan(temp)) doc["temp"] = temp;
   if (!isnan(hum)) doc["hum"] = hum;
 
@@ -520,12 +640,12 @@ void sendSensorPacket() {
 
 void sendHeartbeat() {
   float phValue = readPhValue();
-  float temp = dht.readTemperature();
-  float hum = dht.readHumidity();
-  float power = pzem.power();
-  float voltage = isnan(power) ? 0.0f : pzem.voltage();
-  float current = isnan(power) ? 0.0f : pzem.current();
-  float energyTotal = isnan(power) ? 0.0f : pzem.energy();
+  float temp = readCalibratedTemperature();
+  float hum = readCalibratedHumidity();
+  float power = readCalibratedPower();
+  float voltage = isnan(power) ? 0.0f : readCalibratedVoltage();
+  float current = isnan(power) ? 0.0f : readCalibratedCurrent();
+  float energyTotal = isnan(power) ? 0.0f : readCalibratedEnergy();
 
   StaticJsonDocument<768> doc;
   doc["type"] = "heartbeat";
