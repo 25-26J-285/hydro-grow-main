@@ -65,6 +65,14 @@ export const authAPI = {
 
 export const sensorAPI = {
   getAll: () => api.get('/api/sensors/all'),
+  getLatest: () => api.get('/api/sensors/latest'),
+  getHistory: (deviceType?: 'mobile' | 'stationary', limit = 20) =>
+    api.get('/api/sensors/history', {
+      params: {
+        ...(deviceType ? { device_type: deviceType } : {}),
+        limit,
+      },
+    }),
   getEnergy: () => api.get('/api/sensor/energy'),
   getDeviceStatus: () => api.get('/api/devices/status'),
 };

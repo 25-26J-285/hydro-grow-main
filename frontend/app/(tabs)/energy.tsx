@@ -7,8 +7,6 @@ import Colors from '../../constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { API_BASE_URL, sensorAPI } from '../../services/api';
 
-const ELECTRICITY_RATE_PER_KWH = 45; // Rs. per kWh
-
 interface SensorData {
   temp: number;
   humidity: number;
@@ -124,7 +122,6 @@ export default function Energy() {
     router.push('/controls');
   };
 
-  const cost = (sensors.totalEnergy * ELECTRICITY_RATE_PER_KWH).toFixed(2);
   const predictionStatus = prediction.available
     ? `24 samples used${prediction.samples_collected ? ` | ${prediction.samples_collected} collected` : ''}`
     : prediction.reason ?? 'Prediction unavailable';
@@ -189,23 +186,30 @@ export default function Energy() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Energy Analytics</Text>
+            <Text style={styles.sectionTitle}>System Energy Status</Text>
+            <Text style={styles.sectionSubtitle}>Stationary unit energy monitor overview</Text>
 
             <View style={styles.analyticsRow}>
               <View style={[styles.card, styles.analyticsCard]}>
-                <MaterialCommunityIcons name="lightning-bolt" size={28} color="#FFA500" />
-                <Text style={styles.analyticsCardTitle}>Current Usage</Text>
-                <Text style={styles.analyticsCardValue}>{sensors.power.toFixed(1)} W</Text>
+                <MaterialCommunityIcons
+                  name={devices.stationary ? 'check-decagram' : 'alert-circle'}
+                  size={28}
+                  color={devices.stationary ? '#22c55e' : '#ef4444'}
+                />
+                <Text style={styles.analyticsCardTitle}>Energy Monitor Status</Text>
+                <Text style={styles.analyticsCardValue}>{sensors.energyStatus}</Text>
                 <Text style={styles.cardSub}>
-                  {sensors.voltage.toFixed(1)} V | {sensors.current.toFixed(2)} A
+                  {devices.stationary ? 'Stationary unit connected' : 'Stationary unit disconnected'}
                 </Text>
               </View>
 
               <View style={[styles.card, styles.analyticsCard]}>
-                <MaterialCommunityIcons name="cash" size={28} color={Colors.primary} />
-                <Text style={styles.analyticsCardTitle}>Today's Cost</Text>
-                <Text style={styles.analyticsCardValue}>Rs. {cost}</Text>
-                <Text style={styles.cardSub}>{sensors.totalEnergy.toFixed(3)} kWh</Text>
+                <MaterialCommunityIcons name="meter-electric" size={28} color={Colors.primary} />
+                <Text style={styles.analyticsCardTitle}>Total Energy Recorded</Text>
+                <Text style={styles.analyticsCardValue}>{(sensors.totalEnergy * 1000).toFixed(2)} Wh</Text>
+                <Text style={styles.cardSub}>
+                  {sensors.voltage.toFixed(1)} V
+                </Text>
               </View>
             </View>
           </View>

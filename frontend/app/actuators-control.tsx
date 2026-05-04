@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  Dimensions,
-  Image,
 } from 'react-native';
-import { API_BASE_URL } from '../services/api';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -18,16 +15,6 @@ import { TraySlotCard } from '../components/TraySlotCard';
 // molinda actuators control
 export default function ActuatorsControl() {
   const router = useRouter();
-  const [snapshotUri, setSnapshotUri] = useState<string | null>(null);
-
-  useEffect(() => {
-    const refresh = () => {
-      setSnapshotUri(`${API_BASE_URL}/api/snapshot?t=${Date.now()}`);
-    };
-    refresh();
-    const interval = setInterval(refresh, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleBack = () => {
     router.back();
@@ -97,32 +84,6 @@ export default function ActuatorsControl() {
         <View style={styles.headerSection}>
           <Text style={styles.pageTitle}>Actuators</Text>
           <Text style={styles.pageSubtitle}>Smart Hydroponic System</Text>
-        </View>
-
-        {/* Live Plant View Card */}
-        <View style={styles.cameraCard}>
-          <TouchableOpacity style={styles.arrowLeft}>
-            <Ionicons name="chevron-back" size={24} color="black" />
-          </TouchableOpacity>
-
-          <View style={styles.cameraContent}>
-            {snapshotUri ? (
-              <Image
-                source={{ uri: snapshotUri }}
-                style={{ width: '100%', height: '100%', borderRadius: 20 }}
-                resizeMode="cover"
-              />
-            ) : (
-              <>
-                <Text style={styles.cameraText}>Live Plant View</Text>
-                <Ionicons name="camera" size={24} color="#666" style={{ marginTop: 8 }} />
-              </>
-            )}
-          </View>
-
-          <TouchableOpacity style={styles.arrowRight}>
-            <Ionicons name="chevron-forward" size={24} color="black" />
-          </TouchableOpacity>
         </View>
 
         <Text style={styles.sectionTitle}>Active Tray Slots</Text>
@@ -204,40 +165,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginTop: 4,
-  },
-  cameraCard: {
-    backgroundColor: '#EAEAEA',
-    height: 160,
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginBottom: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 10,
-  },
-  cameraContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100%',
-  },
-  arrowLeft: {
-    padding: 10,
-  },
-  arrowRight: {
-    padding: 10,
-  },
-  expandIcon: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    padding: 5,
-  },
-  cameraText: {
-    fontSize: 14,
-    color: '#333',
-    fontWeight: '500',
   },
   sectionTitle: {
     fontSize: 16,

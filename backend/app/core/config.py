@@ -9,6 +9,10 @@ class Settings:
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     CORS_ORIGINS: list = ["*"]
+    MONGODB_URL: str = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
+    MONGODB_DB_NAME: str = os.getenv("MONGODB_DB_NAME", "hydro_grow")
+    MONGODB_USERS_COLLECTION: str = os.getenv("MONGODB_USERS_COLLECTION", "users")
+    MONGODB_SENSOR_COLLECTION: str = os.getenv("MONGODB_SENSOR_COLLECTION", "sensor_readings")
 
     MODELS_DIR: str = os.path.join(BASE_DIR, "models")
     IMAGES_DIR: str = os.path.join(BASE_DIR, "images")

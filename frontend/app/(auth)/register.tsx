@@ -14,6 +14,10 @@ import Colors from '../../constants/Colors';
 import { InputField, CustomButton } from '../../components';
 import { authService } from '../../services/authService';
 
+const NAME_ALLOWED_REGEX = /[^a-zA-Z\s]/g;
+const EMAIL_ALLOWED_REGEX = /[^a-zA-Z0-9@._-]/g;
+const PASSWORD_ALLOWED_REGEX = /[^a-zA-Z0-9]/g;
+
 export default function RegisterScreen() {
   const router = useRouter();
   const [fullname, setFullname] = useState('');
@@ -21,20 +25,95 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fullnameError, setFullnameError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+
+  const handleFullnameChange = (value: string) => {
+    const sanitized = value.replace(NAME_ALLOWED_REGEX, '').replace(/\s+/g, ' ');
+    setFullname(sanitized);
+    if (fullnameError) {
+      setFullnameError('');
+    }
+  };
+
+  const handleEmailChange = (value: string) => {
+    const sanitized = value.replace(EMAIL_ALLOWED_REGEX, '').toLowerCase();
+    setEmail(sanitized);
+    if (emailError) {
+      setEmailError('');
+    }
+  };
+
+  const handlePasswordChange = (value: string) => {
+    const sanitized = value.replace(PASSWORD_ALLOWED_REGEX, '');
+    setPassword(sanitized);
+    if (passwordError) {
+      setPasswordError('');
+    }
+  };
+
+  const handleConfirmPasswordChange = (value: string) => {
+    const sanitized = value.replace(PASSWORD_ALLOWED_REGEX, '');
+    setConfirmPassword(sanitized);
+    if (confirmPasswordError) {
+      setConfirmPasswordError('');
+    }
+  };
+
+  const validateForm = () => {
+    let valid = true;
+
+    if (!fullname.trim()) {
+      setFullnameError('Full name is required.');
+      valid = false;
+    } else if (!/^[A-Za-z]+(?:\s[A-Za-z]+)*$/.test(fullname.trim())) {
+      setFullnameError('Use letters and spaces only.');
+      valid = false;
+    } else {
+      setFullnameError('');
+    }
+
+    if (!email) {
+      setEmailError('Email is required.');
+      valid = false;
+    } else if (!/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+      setEmailError('Enter a valid email address.');
+      valid = false;
+    } else {
+      setEmailError('');
+    }
+
+    if (!password) {
+      setPasswordError('Password is required.');
+      valid = false;
+    } else if (!/^[a-zA-Z0-9]+$/.test(password)) {
+      setPasswordError('Use letters and numbers only.');
+      valid = false;
+    } else if (password.length < 6) {
+      setPasswordError('Password must be at least 6 characters.');
+      valid = false;
+    } else {
+      setPasswordError('');
+    }
+
+    if (!confirmPassword) {
+      setConfirmPasswordError('Please confirm your password.');
+      valid = false;
+    } else if (password !== confirmPassword) {
+      setConfirmPasswordError('Passwords do not match.');
+      valid = false;
+    } else {
+      setConfirmPasswordError('');
+    }
+
+    return valid;
+  };
 
   const handleRegister = async () => {
-    if (!fullname || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      return;
-    }
-
-    if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+    if (!validateForm()) {
+      Alert.alert('Error', 'Please correct the highlighted fields.');
       return;
     }
 
@@ -43,7 +122,7 @@ export default function RegisterScreen() {
       await authService.register(email, password, fullname);
       Alert.alert(
         'Success',
-        'Account created! Please log in with your credentials.'
+        'Account created and saved in MongoDB. Please log in with your credentials.'
       );
       router.replace('/(auth)/login');
     } catch (error: any) {
@@ -90,8 +169,9 @@ export default function RegisterScreen() {
             label="Full Name"
             placeholder="Enter your full name"
             value={fullname}
-            onChangeText={setFullname}
+            onChangeText={handleFullnameChange}
             editable={!loading}
+            error={fullnameError}
             icon={<MaterialIcons name="person" size={20} color={Colors.gray} />}
           />
 
@@ -100,10 +180,11 @@ export default function RegisterScreen() {
             label="Email"
             placeholder="Enter your email"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={handleEmailChange}
             keyboardType="email-address"
             autoCapitalize="none"
             editable={!loading}
+            error={emailError}
             icon={<MaterialIcons name="email" size={20} color={Colors.gray} />}
           />
 
@@ -112,9 +193,10 @@ export default function RegisterScreen() {
             label="Password"
             placeholder="Enter your password"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={handlePasswordChange}
             secureTextEntry
             editable={!loading}
+            error={passwordError}
             icon={<MaterialIcons name="lock" size={20} color={Colors.gray} />}
           />
 
@@ -123,9 +205,10 @@ export default function RegisterScreen() {
             label="Confirm Password"
             placeholder="Confirm your password"
             value={confirmPassword}
-            onChangeText={setConfirmPassword}
+            onChangeText={handleConfirmPasswordChange}
             secureTextEntry
             editable={!loading}
+            error={confirmPasswordError}
             icon={<MaterialIcons name="lock" size={20} color={Colors.gray} />}
           />
 
